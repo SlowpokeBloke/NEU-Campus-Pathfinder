@@ -1,0 +1,41 @@
+Campus walking graph — validation report
+==========================================
+Nodes: 2152
+Directed edges: 5588
+Physical segments: 2794
+Strongly connected: True
+Total length (km, one direction): 80.79
+Edge length min/median/max (m): 0.4 / 16.5 / 341.5
+Edges shorter than 1 m: 30
+Dead-end nodes (degree 1): 452
+
+Edges by highway type:
+  footway         4222
+  service         880
+  residential     150
+  steps           126
+  primary         52
+  busway          44
+  pedestrian      30
+  path            26
+  unclassified    20
+  corridor        20
+  secondary       12
+  primary_link    4
+  tertiary        2
+
+Tag coverage (share of directed edges with a known value):
+  tactile_paving  1.6%
+  wheelchair      4.1%
+  surface         47.1%
+  incline         5.7%
+  is_steps        126 edges
+  is_indoor       46 edges
+  is_covered      180 edges
+
+Crossings by type:
+  none                 4594
+  marked_unsignalized  580
+  unmarked             222
+  signalized           188
+  unknown              4
