@@ -4,6 +4,7 @@ algorithms.py
 A* search and helper functions used by husky_card_demo.py and campus_search.py.
 """
 
+from collections import deque
 import heapq
 import itertools
 import math
@@ -48,6 +49,42 @@ def astar(start, goal, neighbors, heuristic):
     return {"found": False, "path": [], "cost": math.inf, "explored": explored,
             "runtime_s": time.perf_counter() - t0}
 
+def weighted_astar(start, goal, neighbors, heuristic, w=1.5):
+    """Weighted A*: same as astar() but with a default weight of 1.5."""
+    return astar(start, goal, neighbors, heuristic, w=w)
+
+#BFS.
+def bfs(start, goal, neighbors):
+    #finding path with the fewest steps, ignoring edge costs
+    t0 = time.perf_counter()
+    parent = {start: None}  #Tracks parent nodes and visited nodes
+    step_cost = {start: 0.0}
+    explored = []
+    queue = deque([start])
+ 
+    while queue:
+        node = queue.popleft()
+        explored.append(node)
+ 
+        if node == goal:
+            path, cost = [], 0.0
+            while node is not None:
+                path.append(node)
+                cost += step_cost[node]
+                node = parent[node]
+            return {"found": True, "path": path[::-1], "cost": cost,
+                    "explored": explored,
+                    "time_taken": time.perf_counter() - t0}
+ 
+        for nxt, step in neighbors(node):
+            if step == math.inf or nxt in parent:
+                continue
+            parent[nxt] = node
+            step_cost[nxt] = step
+            queue.append(nxt)
+ 
+    return {"found": False, "path": [], "cost": math.inf, "explored": explored,
+            "time_taken": time.perf_counter() - t0}
 
 # Heuristics
 
@@ -59,6 +96,22 @@ def euclidean(coords, goal):
     gx, gy = coords[goal]
     return lambda n: math.hypot(gx - coords[n][0], gy - coords[n][1])
 
+
+def haversine(G, goal):
+    """Distance to the goal, for OSMnx graphs."""
+    lat2, lon2 = math.radians(G.nodes[goal]["y"]), G.nodes[goal]["x"]
+    cache = {}
+ 
+    def h(n):
+        if n not in cache:
+            lat1 = math.radians(G.nodes[n]["y"])
+            dlat, dlon = lat2 - lat1, math.radians(lon2 - G.nodes[n]["x"])
+            a = (math.sin(dlat / 2) ** 2
+                 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2)
+            cache[n] = 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
+        return cache[n]
+ 
+    return h
 
 # Helpers for networkx graphs
 
