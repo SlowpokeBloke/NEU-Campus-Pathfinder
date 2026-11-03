@@ -1,24 +1,15 @@
-"""
-pull_campus_graph.py
-
-Downloads the Northeastern walking network from OpenStreetMap, cleans it,
-and saves it to data/processed/.
-
-Usage:
-    python pull_campus_graph.py
-    python pull_campus_graph.py --dist 900
-"""
+# Downloading the Northeastern walking map using OpenStreetMap
+# and saving it to data/processed/.
 
 import argparse
 import math
 import os
 from collections import Counter
-
 import networkx as nx
 
 # Configuration
 
-# Center of the area to download (lat, lon)
+# Center of the area to download (latitude, longitude)
 CAMPUS_CENTER = (42.3388, -71.0890)
 DEFAULT_DIST_M = 700
 PLACE_QUERY = "Northeastern University, Boston, Massachusetts, USA"
