@@ -1,41 +1,49 @@
 Campus walking graph — validation report
 ==========================================
-Nodes: 2152
-Directed edges: 5588
-Physical segments: 2794
+Nodes: 2161
+Directed edges: 5608
+Physical segments: 2804
 Strongly connected: True
-Total length (km, one direction): 80.79
-Edge length min/median/max (m): 0.4 / 16.5 / 341.5
+Total length (km, one direction): 80.88
+Edge length min/median/max (m): 0.4 / 16.4 / 335.0
 Edges shorter than 1 m: 30
-Dead-end nodes (degree 1): 452
+Dead-end nodes (degree 1): 453
 
 Edges by highway type:
-  footway         4222
-  service         880
+  footway         4230
+  service         882
   residential     150
   steps           126
   primary         52
-  busway          44
+  busway          50
   pedestrian      30
   path            26
   unclassified    20
   corridor        20
   secondary       12
   primary_link    4
+  construction    4
   tertiary        2
 
 Tag coverage (share of directed edges with a known value):
   tactile_paving  1.6%
   wheelchair      4.1%
-  surface         47.1%
+  surface         47.0%
   incline         5.7%
   is_steps        126 edges
   is_indoor       46 edges
-  is_covered      180 edges
+  is_tunnel       158 edges
+  is_covered      218 edges
 
 Crossings by type:
-  none                 4594
+  none                 4614
   marked_unsignalized  580
   unmarked             222
   signalized           188
   unknown              4
+
+Tunnel segments dropped (not connected to surface): 3
+  11137305717 -> 11137305718  (unnamed)  near (42.33728, -71.08736)
+  61371079 -> 61371088  Huntington Avenue  near (42.34292, -71.08470)
+  61423871 -> 1325749945  Huntington Avenue  near (42.34263, -71.08515)
+  Connect these to their surface entrances by hand (see add_portal_edge) and re-run.

@@ -60,23 +60,6 @@ def euclidean(coords, goal):
     return lambda n: math.hypot(gx - coords[n][0], gy - coords[n][1])
 
 
-def haversine(G, goal):
-    """Distance to the goal on the Earth's surface, for OSMnx graphs."""
-    lat2, lon2 = math.radians(G.nodes[goal]["y"]), G.nodes[goal]["x"]
-    cache = {}
-
-    def h(n):
-        if n not in cache:
-            lat1 = math.radians(G.nodes[n]["y"])
-            dlat, dlon = lat2 - lat1, math.radians(lon2 - G.nodes[n]["x"])
-            a = (math.sin(dlat / 2) ** 2
-                 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2)
-            cache[n] = 2 * EARTH_RADIUS_M * math.asin(math.sqrt(a))
-        return cache[n]
-
-    return h
-
-
 # Helpers for networkx graphs
 
 def networkx_neighbors(G, cost_fn):
