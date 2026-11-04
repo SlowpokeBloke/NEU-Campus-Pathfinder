@@ -12,11 +12,11 @@ per user profile.
 pip install "osmnx>=2.0" networkx matplotlib folium
 ```
 
-Python 3.12. Run the scripts from this folder, or they won't find their data.
+Python 3.12
 
 ## Running it
 
-**Download the map first.** Requires internet. The result is not stored in git.
+**Download map first.** Requires internet.
 
 ```
 python pull_campus_graph.py
