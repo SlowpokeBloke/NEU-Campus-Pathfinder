@@ -13,7 +13,7 @@ import time
 
 # A* search
 #implemented by Ronit and Kunal
-def astar(start, goal, neighbors, heuristic):
+def astar(start, goal, neighbors, heuristic, w=1.0):
     """Find the cheapest path from start to goal using A*."""
     t0 = time.perf_counter()
     g = {start: 0.0}       # cost from start to each node
@@ -21,8 +21,7 @@ def astar(start, goal, neighbors, heuristic):
     closed = set()         # nodes we are done with
     explored = []          # nodes in the order we expanded them
     tie = itertools.count()
-    frontier = [(heuristic(start), next(tie), start)]
-
+    frontier = [(w * heuristic(start), next(tie), start)]
     while frontier:
         _, _, node = heapq.heappop(frontier)
         if node in closed:
@@ -44,7 +43,7 @@ def astar(start, goal, neighbors, heuristic):
             if new_g < g.get(nxt, math.inf):
                 g[nxt] = new_g
                 parent[nxt] = node
-                heapq.heappush(frontier, (new_g + heuristic(nxt), next(tie), nxt))
+                heapq.heappush(frontier, (new_g + w * heuristic(nxt), next(tie), nxt))
 
     return {"found": False, "path": [], "cost": math.inf, "explored": explored,
             "runtime_s": time.perf_counter() - t0}
@@ -75,7 +74,7 @@ def bfs(start, goal, neighbors):
                 node = parent[node]
             return {"found": True, "path": path[::-1], "cost": cost,
                     "explored": explored,
-                    "time_taken": time.perf_counter() - t0}
+                    "runtime_s": time.perf_counter() - t0}
  
         for nxt, step in neighbors(node):
             if step == math.inf or nxt in parent:
@@ -85,7 +84,7 @@ def bfs(start, goal, neighbors):
             queue.append(nxt)
  
     return {"found": False, "path": [], "cost": math.inf, "explored": explored,
-            "time_taken": time.perf_counter() - t0}
+            "runtime_s": time.perf_counter() - t0}
 
 # Heuristics
 
