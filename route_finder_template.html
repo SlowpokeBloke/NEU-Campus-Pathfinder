@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NEU Campus Pathfinder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EEF1F3;
+    --panel: #FFFFFF;
+    --ink: #1C2127;
+    --muted: #5E6873;
+    --line: #C9CFD4;
+    --path: #B4BCC3;
+    --red: #C8102E;
+    --red-ink: #FFFFFF;
+    --stairs: #D98E04;
+    --indoor: #6B4FA0;
+    --ok: #2E7D4F;
+    --warn: #B3261E;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1A1F24;
+      --panel: #22282E;
+      --ink: #E6E9EC;
+      --muted: #A0A9B2;
+      --line: #3A424A;
+      --path: #4F5862;
+      --red: #E0384F;
+      --stairs: #F0A830;
+      --indoor: #A98EE0;
+      --ok: #5FBF85;
+      --warn: #FF8A80;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Overpass", "Helvetica Neue", Arial, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.45;
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    grid-template-rows: 100%;
+  }
+  aside {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    padding: 0 0 32px;
+  }
+  .sign {
+    background: var(--red);
+    color: var(--red-ink);
+    padding: 20px 24px 18px;
+  }
+  .sign h1 {
+    margin: 0;
+    font-weight: 800;
+    font-size: 26px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+  }
+  .sign p { margin: 6px 0 0; font-size: 14px; opacity: 0.92; }
+  section { padding: 18px 24px 0; }
+  h2 { font-size: 17px; font-weight: 800; margin: 0 0 10px; }
+  .tabs { display: flex; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
+  .tabs button {
+    flex: 1; padding: 9px 0; border: 0; background: transparent; color: var(--ink);
+    font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .tabs button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+  label { display: block; font-weight: 600; font-size: 13px; margin: 12px 0 4px; }
+  input, select {
+    width: 100%; padding: 8px 10px; font: inherit; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+  .primary, .secondary {
+    font: inherit; font-weight: 800; padding: 10px 16px; border-radius: 4px; cursor: pointer;
+  }
+  .primary { background: var(--red); color: var(--red-ink); border: 2px solid var(--red); flex: 1; }
+  .secondary { background: transparent; color: var(--ink); border: 2px solid var(--line); }
+  button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 3px solid var(--red); outline-offset: 2px;
+  }
+  .status { margin: 14px 0 0; font-size: 14px; }
+  .status.error { color: var(--warn); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  th { font-weight: 600; color: var(--muted); }
+  tr.best td { font-weight: 800; }
+  .algo-table input { width: auto; }
+  ul.advice { margin: 0; padding-left: 18px; }
+  ul.advice li { margin-bottom: 6px; }
+  .yes { color: var(--ok); font-weight: 600; }
+  .no { color: var(--warn); font-weight: 800; }
+  #chart { width: 100%; height: 170px; display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .legend span::before {
+    content: ""; display: inline-block; width: 14px; height: 4px; margin-right: 6px;
+    vertical-align: middle; background: var(--c); border-top: 0;
+  }
+  main { position: relative; overflow: hidden; }
+  #map { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+  #map .edge { stroke: var(--path); fill: none; vector-effect: non-scaling-stroke; }
+  #map .edge.stairs { stroke: var(--stairs); }
+  #map .edge.door { stroke: var(--indoor); }
+  #map .edge.closed { stroke: var(--ink); stroke-dasharray: 6 4; }
+  #map .route { stroke: var(--red); fill: none; stroke-linecap: round; stroke-linejoin: round;
+                vector-effect: non-scaling-stroke; }
+  #map .place { font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke;
+                stroke: var(--paper); stroke-width: 3px; }
+  .maplegend {
+    position: absolute; left: 16px; bottom: 16px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 4px; padding: 8px 12px; font-size: 12px;
+    display: flex; gap: 14px; flex-wrap: wrap; max-width: calc(100% - 32px);
+  }
+  .maplegend span::before {
+    content: ""; display: inline-block; width: 18px; height: 4px; margin-right: 6px;
+    vertical-align: middle; background: var(--c);
+  }
+  #hover {
+    position: absolute; pointer-events: none; background: var(--ink); color: var(--panel);
+    font-size: 12px; padding: 3px 7px; border-radius: 3px; display: none; white-space: nowrap;
+  }
+  @media (max-width: 860px) {
+    body { grid-template-columns: 1fr; grid-template-rows: 55vh auto; }
+    main { grid-row: 1; }
+    aside { grid-row: 2; border-right: 0; border-top: 1px solid var(--line); overflow: visible; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<aside>
+  <div class="sign">
+    <h1>NEU Campus Pathfinder</h1>
+    <p>Pick a start and a goal. Four search algorithms find the route, and the page shows which one did the least work.</p>
+  </div>
+
+  <section>
+    <div class="tabs" role="group" aria-label="Map">
+      <button id="tab-husky" aria-pressed="true">Husky Card map</button>
+      <button id="tab-campus" aria-pressed="false">Campus map</button>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="from">From</label>
+        <select id="from"></select>
+      </div>
+      <div>
+        <label for="to">To</label>
+        <select id="to"></select>
+      </div>
+    </div>
+
+    <div id="husky-fields" class="row">
+      <div>
+        <label for="card">Husky Card number</label>
+        <input id="card" placeholder="Leave empty for a visitor" inputmode="numeric">
+      </div>
+      <div>
+        <label for="hour">Time</label>
+        <select id="hour"></select>
+      </div>
+    </div>
+
+    <div id="campus-fields" hidden>
+      <label for="profile">Walking profile</label>
+      <select id="profile">
+        <option value="step_free">Step-free (no stairs)</option>
+        <option value="fastest">Fastest (stairs allowed)</option>
+      </select>
+    </div>
+
+    <p class="hint">Click the map to set From, then To. Shift-click a path to close or reopen it.</p>
+
+    <div class="actions">
+      <button class="primary" id="go">Find route</button>
+      <button class="secondary" id="clear">Reopen paths</button>
+    </div>
+    <p class="status" id="status" role="status"></p>
+  </section>
+
+  <section id="results" hidden>
+    <h2>Algorithms</h2>
+    <table class="algo-table">
+      <thead><tr><th>Show</th><th>Algorithm</th><th>Metres</th><th>Steps</th><th>Checked</th><th>ms</th></tr></thead>
+      <tbody id="algo-rows"></tbody>
+    </table>
+
+    <h2 style="margin-top:20px">Which one to use</h2>
+    <ul class="advice" id="advice"></ul>
+
+    <h2 style="margin-top:20px">Heuristic along the A* route</h2>
+    <svg id="chart" role="img" aria-label="Heuristic compared with real distance left"></svg>
+    <div class="legend">
+      <span style="--c: var(--ink)">Real distance left</span>
+      <span style="--c: #2F6FB0">A* estimate h</span>
+      <span style="--c: var(--stairs)">Weighted A* (1.5 × h)</span>
+    </div>
+    <table style="margin-top:12px">
+      <thead><tr><th>Step</th><th>Place</th><th>Walked</th><th>h</th><th>Left</th><th>h ≤ left</th></tr></thead>
+      <tbody id="trace-rows"></tbody>
+    </table>
+  </section>
+</aside>
+
+<main>
+  <svg id="map" aria-label="Map of paths"></svg>
+  <div id="hover"></div>
+  <div class="maplegend" id="maplegend"></div>
+</main>
+
+<script>
+const DATA = __DATA__;
+
+// CORE START  (search algorithms, same logic as algorithms.py)
+class MinHeap {
+  constructor() { this.a = []; }
+  get size() { return this.a.length; }
+  less(i, j) {
+    const x = this.a[i], y = this.a[j];
+    return x[0] < y[0] || (x[0] === y[0] && x[1] < y[1]);
+  }
+  push(item) {
+    const a = this.a; a.push(item);
+    let i = a.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (!this.less(i, p)) break;
+      [a[i], a[p]] = [a[p], a[i]]; i = p;
+    }
+  }
+  pop() {
+    const a = this.a, top = a[0], last = a.pop();
+    if (a.length) {
+      a[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1, r = l + 1;
+        let m = i;
+        if (l < a.length && this.less(l, m)) m = l;
+        if (r < a.length && this.less(r, m)) m = r;
+        if (m === i) break;
+        [a[i], a[m]] = [a[m], a[i]]; i = m;
+      }
+    }
+    return top;
+  }
+}
+
+// A* with weight w: f = g + w * h.  w = 1 is A*, w > 1 is Weighted A*, h = 0 is Dijkstra.
+function astar(start, goal, neighbors, heuristic, w = 1) {
+  const t0 = performance.now();
+  const g = new Map([[start, 0]]), parent = new Map(), closed = new Set(), explored = [];
+  let tie = 0;
+  const frontier = new MinHeap();
+  frontier.push([w * heuristic(start), tie++, start]);
+  while (frontier.size) {
+    const node = frontier.pop()[2];
+    if (closed.has(node)) continue;
+    closed.add(node);
+    explored.push(node);
+    if (node === goal) {
+      const path = [goal];
+      while (path[path.length - 1] !== start) path.push(parent.get(path[path.length - 1]));
+      return { found: true, path: path.reverse(), cost: g.get(goal), explored, ms: performance.now() - t0 };
+    }
+    for (const [nxt, step] of neighbors(node)) {
+      if (step === Infinity || closed.has(nxt)) continue;
+      const newG = g.get(node) + step;
+      if (newG < (g.has(nxt) ? g.get(nxt) : Infinity)) {
+        g.set(nxt, newG);
+        parent.set(nxt, node);
+        frontier.push([newG + w * heuristic(nxt), tie++, nxt]);
+      }
+    }
+  }
+  return { found: false, path: [], cost: Infinity, explored, ms: performance.now() - t0 };
+}
+
+// BFS: fewest steps, ignores how long each step is.
+function bfs(start, goal, neighbors) {
+  const t0 = performance.now();
+  const parent = new Map([[start, null]]), stepCost = new Map([[start, 0]]), explored = [];
+  const queue = [start];
+  let head = 0;
+  while (head < queue.length) {
+    let node = queue[head++];
+    explored.push(node);
+    if (node === goal) {
+      const path = []; let cost = 0;
+      while (node !== null) { path.push(node); cost += stepCost.get(node); node = parent.get(node); }
+      return { found: true, path: path.reverse(), cost, explored, ms: performance.now() - t0 };
+    }
+    for (const [nxt, step] of neighbors(node)) {
+      if (step === Infinity || parent.has(nxt)) continue;
+      parent.set(nxt, node);
+      stepCost.set(nxt, step);
+      queue.push(nxt);
+    }
+  }
+  return { found: false, path: [], cost: Infinity, explored, ms: performance.now() - t0 };
+}
+
+const EARTH_RADIUS_M = 6371009;
+function haversine(a, b) {
+  const lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
+  const dlat = lat2 - lat1, dlon = (b.lon - a.lon) * Math.PI / 180;
+  const h = Math.sin(dlat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dlon / 2) ** 2;
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
+}
+
+// SHA-256, so card numbers are hashed the same way as husky_card_demo.py
+function sha256(text) {
+  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const bytes = Array.from(new TextEncoder().encode(text));
+  const bitLen = bytes.length * 8;
+  bytes.push(0x80);
+  while (bytes.length % 64 !== 56) bytes.push(0);
+  for (let i = 7; i >= 0; i--) bytes.push(Math.floor(bitLen / 2 ** (8 * i)) & 0xff);
+  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let off = 0; off < bytes.length; off += 64) {
+    const W = new Array(64);
+    for (let i = 0; i < 16; i++) {
+      const j = off + 4 * i;
+      W[i] = (bytes[j] << 24) | (bytes[j + 1] << 16) | (bytes[j + 2] << 8) | bytes[j + 3];
+    }
+    for (let i = 16; i < 64; i++) {
+      const s0 = rotr(W[i-15], 7) ^ rotr(W[i-15], 18) ^ (W[i-15] >>> 3);
+      const s1 = rotr(W[i-2], 17) ^ rotr(W[i-2], 19) ^ (W[i-2] >>> 10);
+      W[i] = (W[i-16] + s0 + W[i-7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let i = 0; i < 64; i++) {
+      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
+      const t1 = (h + S1 + ((e & f) ^ (~e & g)) + K[i] + W[i]) | 0;
+      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
+      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H = H.map((x, i) => (x + [a, b, c, d, e, f, g, h][i]) | 0);
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, "0")).join("");
+}
+
+// Build the search inputs for one map
+function buildGraph(map) {
+  const nodes = new Map(map.nodes.map(n => [String(n.id), n]));
+  const adj = new Map([...nodes.keys()].map(id => [id, []]));
+  for (const e of map.edges) {
+    adj.get(String(e.u)).push({ to: String(e.v), e });
+    adj.get(String(e.v)).push({ to: String(e.u), e });
+  }
+  return { nodes, adj };
+}
+
+function lockedBuildings(husky, card, hour) {
+  const allowed = new Set(card ? (husky.access[sha256(husky.salt + card)] || []) : []);
+  const locked = new Set();
+  for (const [b, [open, close]] of Object.entries(husky.hours)) {
+    if (!(open <= hour && hour < close) && !allowed.has(b)) locked.add(b);
+  }
+  return { locked, known: card ? (sha256(husky.salt + card) in husky.access) : null };
+}
+
+function makeNeighbors(graph, costOf) {
+  return node => {
+    const best = new Map();
+    for (const { to, e } of graph.adj.get(node)) {
+      const c = costOf(e);
+      if (c < (best.has(to) ? best.get(to) : Infinity)) best.set(to, c);
+    }
+    return best;
+  };
+}
+
+function runAll(start, goal, neighbors, heuristic) {
+  return {
+    "A*": astar(start, goal, neighbors, heuristic),
+    "Weighted A* (w=1.5)": astar(start, goal, neighbors, heuristic, 1.5),
+    "Dijkstra (no heuristic)": astar(start, goal, neighbors, () => 0),
+    "BFS (fewest steps)": bfs(start, goal, neighbors),
+  };
+}
+// CORE END
+
+// ---------- Page ----------
+const $ = id => document.getElementById(id);
+const svg = $("map");
+const NS = "http://www.w3.org/2000/svg";
+let current = "husky";
+let graph, closed = new Set(), results = null, shown = null, clickTurn = "from", view = null;
+
+for (let h = 0; h < 24; h++) {
+  const o = document.createElement("option");
+  o.value = h; o.textContent = `${String(h).padStart(2, "0")}:00`;
+  if (h === 23) o.selected = true;
+  $("hour").append(o);
+}
+
+function setMap(name) {
+  current = name;
+  const map = DATA[name];
+  graph = buildGraph(map);
+  closed = new Set(); results = null; shown = null; clickTurn = "from";
+  $("tab-husky").setAttribute("aria-pressed", name === "husky");
+  $("tab-campus").setAttribute("aria-pressed", name === "campus");
+  $("husky-fields").hidden = name !== "husky";
+  $("campus-fields").hidden = name !== "campus";
+  $("results").hidden = true;
+  const sorted = map.kind === "campus"
+    ? [...map.nodes].sort((a, b) => Number(a.id) - Number(b.id) || String(a.id).localeCompare(String(b.id)))
+    : map.nodes;
+  const options = `<option value="">Choose a place</option>` + sorted.map(n => {
+    const text = n.building ? `${n.id} (${n.building})`
+      : n.label && n.label !== String(n.id) ? n.label
+      : map.kind === "campus" ? `Node ${n.id}` : n.id;
+    return `<option value="${String(n.id)}">${text}</option>`;
+  }).join("");
+  $("from").innerHTML = options;
+  $("to").innerHTML = options;
+  $("from").value = map.start || "";
+  $("to").value = map.goal || "";
+  setStatus(name === "campus"
+    ? `Using the ${map.source}. ${map.nodes.length} places, ${map.edges.length} paths.`
+    : "Doors into Marino and Curry lock at night unless your card opens them.");
+  fitView();
+  draw();
+}
+
+function setStatus(text, error = false) {
+  $("status").textContent = text;
+  $("status").className = "status" + (error ? " error" : "");
+}
+
+function matchPlace(value) {
+  return value && graph.nodes.has(value) ? value : null;
+}
+
+function findRoute() {
+  const map = DATA[current];
+  const start = matchPlace($("from").value), goal = matchPlace($("to").value);
+  if (!start || !goal) {
+    setStatus(`Choose a ${!start ? "start" : "goal"} from the list or click the map.`, true);
+    return;
+  }
+  let costOf, heuristic, note;
+  if (current === "husky") {
+    const card = $("card").value.trim();
+    const hour = Number($("hour").value);
+    const { locked, known } = lockedBuildings(map, card, hour);
+    costOf = e => (closed.has(e.seg) || (e.door && locked.has(e.door))) ? Infinity : e.len;
+    const g = graph.nodes.get(goal);
+    heuristic = id => { const n = graph.nodes.get(id); return Math.hypot(g.x - n.x, g.y - n.y); };
+    const who = !card ? "Visitor" : known ? "Card recognised" : "Card not recognised, treated as a visitor";
+    note = `${who} at ${String(hour).padStart(2, "0")}:00. Locked: ${[...locked].sort().join(", ") || "nothing"}.`;
+    graph.locked = locked;
+  } else {
+    const profile = $("profile").value;
+    costOf = e => (closed.has(e.seg) || (profile === "step_free" && e.steps)) ? Infinity : e.len;
+    const g = graph.nodes.get(goal), cache = new Map();
+    heuristic = id => {
+      if (!cache.has(id)) cache.set(id, haversine(graph.nodes.get(id), g));
+      return cache.get(id);
+    };
+    note = `Profile: ${profile === "step_free" ? "step-free, stairs blocked" : "fastest, stairs allowed"}.`;
+    graph.locked = new Set();
+  }
+  if (closed.size) note += ` ${closed.size} path${closed.size > 1 ? "s" : ""} closed by you.`;
+  const neighbors = makeNeighbors(graph, costOf);
+  results = runAll(start, goal, neighbors, heuristic);
+  if (!results["A*"].found) {
+    setStatus(`No route from ${start} to ${goal}: every way is blocked. ${note}`, true);
+    $("results").hidden = true; shown = null; draw();
+    return;
+  }
+  setStatus(note);
+  const rows = traceRoute(results["A*"].path, neighbors, heuristic);
+  const { pick, lines } = recommend(results, rows);
+  shown = pick;
+  showTable(pick);
+  $("advice").innerHTML = lines.map(l => `<li>${l}</li>`).join("");
+  showTrace(rows);
+  drawChart(rows);
+  $("results").hidden = false;
+  draw(true);
+}
+
+function traceRoute(path, neighbors, heuristic) {
+  let g = 0;
+  const steps = path.slice(1).map((n, i) => neighbors(path[i]).get(n));
+  const total = steps.reduce((a, b) => a + b, 0);
+  return path.map((node, i) => {
+    if (i > 0) g += steps[i - 1];
+    return { node, g, h: heuristic(node), left: total - g };
+  });
+}
+
+function recommend(res, rows) {
+  const found = Object.entries(res).filter(([, r]) => r.found);
+  const best = Math.min(...found.map(([, r]) => r.cost));
+  const optimal = found.filter(([, r]) => r.cost <= best + 0.5);
+  optimal.sort((a, b) => a[1].explored.length - b[1].explored.length || (a[0] !== "A*") - (b[0] !== "A*"));
+  const [pick, pr] = optimal[0];
+  const lines = [`Use <b>${pick}</b>: it found the shortest route (${best.toFixed(0)} m) while checking the fewest places (${pr.explored.length}).`];
+  const a = res["A*"], d = res["Dijkstra (no heuristic)"];
+  const saved = 1 - a.explored.length / d.explored.length;
+  lines.push(saved > 0
+    ? `The heuristic saved ${(saved * 100).toFixed(0)}% of the work: A* checked ${a.explored.length} places, Dijkstra checked ${d.explored.length}.`
+    : "Here the heuristic saved no work: A* and Dijkstra checked the same number of places, because obstacles forced a detour.");
+  const wa = res["Weighted A* (w=1.5)"], bf = res["BFS (fewest steps)"];
+  if (wa.found && wa.cost > best + 0.5)
+    lines.push(`Weighted A* checked ${wa.explored.length} places but its route is ${(wa.cost - best).toFixed(0)} m longer.`);
+  if (bf.found && bf.cost > best + 0.5)
+    lines.push(`BFS ignores distance: its route is ${(bf.cost - best).toFixed(0)} m longer.`);
+  const q = rows[0].left ? rows[0].h / rows[0].left : 1;
+  const verdict = q >= 0.8 ? "close to the real distance, so A* heads almost straight for the goal."
+    : q >= 0.5 ? "a fair guess: obstacles add some detour, so A* explores a bit more."
+    : "weak: obstacles force a big detour, so A* behaves more like Dijkstra. Weighted A* helps most here.";
+  lines.push(`At the start the straight-line estimate is ${rows[0].h.toFixed(0)} m and the real distance is ${rows[0].left.toFixed(0)} m (${(q * 100).toFixed(0)}%). The heuristic is ${verdict}`);
+  if (rows.every(r => r.h <= r.left + 1e-6))
+    lines.push("The estimate never overestimated along the route, so A* is guaranteed to find the shortest route.");
+  return { pick, lines };
+}
+
+function showTable(pick) {
+  $("algo-rows").innerHTML = Object.entries(results).map(([name, r]) => `
+    <tr class="${name === pick ? "best" : ""}">
+      <td><input type="radio" name="show" value="${name}" ${name === shown ? "checked" : ""} aria-label="Show ${name} on the map"></td>
+      <td>${name}</td>
+      <td>${r.found ? r.cost.toFixed(0) : "none"}</td>
+      <td>${r.found ? r.path.length - 1 : "-"}</td>
+      <td>${r.explored.length}</td>
+      <td>${r.ms < 0.1 ? "&lt;0.1" : r.ms.toFixed(1)}</td>
+    </tr>`).join("");
+  document.querySelectorAll('input[name="show"]').forEach(el =>
+    el.addEventListener("change", () => { shown = el.value; draw(true); }));
+}
+
+function showTrace(rows) {
+  $("trace-rows").innerHTML = rows.map((r, i) => `
+    <tr><td>${i}</td><td>${r.node}</td><td>${r.g.toFixed(0)}</td><td>${r.h.toFixed(0)}</td>
+    <td>${r.left.toFixed(0)}</td><td class="${r.h <= r.left + 1e-6 ? "yes" : "no"}">${r.h <= r.left + 1e-6 ? "yes" : "no"}</td></tr>`).join("");
+}
+
+function drawChart(rows) {
+  const c = $("chart"), W = c.clientWidth || 340, H = 170, P = { l: 40, r: 8, t: 8, b: 22 };
+  const max = Math.max(...rows.map(r => Math.max(r.left, 1.5 * r.h)), 1);
+  const x = i => P.l + (rows.length > 1 ? i / (rows.length - 1) : 0) * (W - P.l - P.r);
+  const y = v => H - P.b - (v / max) * (H - P.t - P.b);
+  const line = f => rows.map((r, i) => `${x(i)},${y(f(r))}`).join(" ");
+  const area = rows.map((r, i) => `${x(i)},${y(r.left)}`).join(" ") + " " +
+               rows.map((r, i) => `${x(i)},${y(r.h)}`).reverse().join(" ");
+  const ink = getComputedStyle(document.body).getPropertyValue("--ink");
+  const stairs = getComputedStyle(document.body).getPropertyValue("--stairs");
+  const muted = getComputedStyle(document.body).getPropertyValue("--muted");
+  c.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  c.innerHTML = `
+    <polygon points="${area}" fill="#2F6FB0" opacity="0.14"/>
+    <polyline points="${line(r => 1.5 * r.h)}" fill="none" stroke="${stairs}" stroke-width="2" stroke-dasharray="5 4"/>
+    <polyline points="${line(r => r.h)}" fill="none" stroke="#2F6FB0" stroke-width="2.5"/>
+    <polyline points="${line(r => r.left)}" fill="none" stroke="${ink}" stroke-width="2.5"/>
+    <text x="${P.l - 6}" y="${y(max) + 10}" text-anchor="end" font-size="11" fill="${muted}">${max.toFixed(0)} m</text>
+    <text x="${P.l - 6}" y="${y(0)}" text-anchor="end" font-size="11" fill="${muted}">0</text>
+    <text x="${P.l}" y="${H - 6}" font-size="11" fill="${muted}">start</text>
+    <text x="${W - P.r}" y="${H - 6}" text-anchor="end" font-size="11" fill="${muted}">goal</text>`;
+}
+
+// ---------- Map drawing, pan and zoom ----------
+function fitView() {
+  const xs = DATA[current].nodes.map(n => n.x), ys = DATA[current].nodes.map(n => -n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const pad = Math.max(maxX - minX, maxY - minY) * 0.08 + 10;
+  const right = current === "husky" ? (maxX - minX) * 0.35 : 0;   // room for place names
+  view = { x: minX - pad, y: minY - pad, w: maxX - minX + 2 * pad + right, h: maxY - minY + 2 * pad };
+}
+
+function applyView() {
+  const r = svg.getBoundingClientRect();
+  const aspect = r.width / Math.max(r.height, 1);
+  let { x, y, w, h } = view;
+  if (w / h < aspect) { const nw = h * aspect; x -= (nw - w) / 2; w = nw; }
+  else { const nh = w / aspect; y -= (nh - h) / 2; h = nh; }
+  svg.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
+  return w / Math.max(r.width, 1);   // map units per screen pixel
+}
+
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  parent.append(e);
+  return e;
+}
+
+function exploredColor(t) {   // dark blue to yellow, by the order nodes were checked
+  const stops = [[48, 18, 120], [33, 120, 160], [60, 185, 110], [240, 220, 40]];
+  const s = Math.min(stops.length - 2, Math.floor(t * (stops.length - 1)));
+  const f = t * (stops.length - 1) - s;
+  const c = stops[s].map((v, i) => Math.round(v + (stops[s + 1][i] - v) * f));
+  return `rgb(${c})`;
+}
+
+function draw(animate = false) {
+  const px = applyView();
+  svg.innerHTML = "";
+  const map = DATA[current];
+  const locked = graph.locked || new Set();
+  const gEdges = el("g", {}, svg);
+  for (const e of map.edges) {
+    const a = graph.nodes.get(String(e.u)), b = graph.nodes.get(String(e.v));
+    let cls = "edge";
+    if (e.steps) cls += " stairs";
+    if (e.door) cls += " door";
+    if (closed.has(e.seg) || (e.door && locked.has(e.door))) cls += " closed";
+    el("line", { x1: a.x, y1: -a.y, x2: b.x, y2: -b.y, class: cls,
+                 "stroke-width": e.steps || e.door ? 3 : 1.6 }, gEdges);
+  }
+  if (current === "husky") {   // mark locked doors with an X
+    for (const e of map.edges) {
+      if (!(e.door && locked.has(e.door)) && !closed.has(e.seg)) continue;
+      const a = graph.nodes.get(e.u), b = graph.nodes.get(e.v);
+      const mx = (a.x + b.x) / 2, my = -(a.y + b.y) / 2, s = 6 * px;
+      el("path", { d: `M${mx - s},${my - s}L${mx + s},${my + s}M${mx - s},${my + s}L${mx + s},${my - s}`,
+                   stroke: "var(--ink)", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, svg);
+    }
+  } else if (closed.size) {
+    for (const e of map.edges) {
+      if (!closed.has(e.seg)) continue;
+      const a = graph.nodes.get(e.u), b = graph.nodes.get(e.v);
+      const mx = (a.x + b.x) / 2, my = -(a.y + b.y) / 2, s = 6 * px;
+      el("path", { d: `M${mx - s},${my - s}L${mx + s},${my + s}M${mx - s},${my + s}L${mx + s},${my - s}`,
+                   stroke: "var(--ink)", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, svg);
+    }
+  }
+  const r = shown && results ? results[shown] : null;
+  if (r) {
+    const gEx = el("g", {}, svg), n = r.explored.length;
+    r.explored.forEach((id, i) => {
+      const p = graph.nodes.get(id);
+      el("circle", { cx: p.x, cy: -p.y, r: (current === "husky" ? 7 : 3.5) * px,
+                     fill: exploredColor(n > 1 ? i / (n - 1) : 0), opacity: 0.85 }, gEx);
+    });
+    if (r.found) {
+      const d = r.path.map((id, i) => { const p = graph.nodes.get(id); return `${i ? "L" : "M"}${p.x},${-p.y}`; }).join("");
+      const route = el("path", { d, class: "route", "stroke-width": 5 }, svg);
+      if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        const len = route.getTotalLength();
+        route.style.strokeDasharray = len; route.style.strokeDashoffset = len;
+        route.getBoundingClientRect();
+        route.style.transition = "stroke-dashoffset 900ms ease-out";
+        route.style.strokeDashoffset = 0;
+      }
+    }
+  }
+  if (current === "husky") {
+    for (const p of map.nodes) {
+      el("circle", { cx: p.x, cy: -p.y, r: 4 * px, fill: "var(--ink)" }, svg);
+      el("text", { x: p.x + 8 * px, y: -p.y - 8 * px, class: "place",
+                   "font-size": 12 * px, "stroke-width": 3 * px }, svg).textContent =
+        p.building ? `${p.label} (${p.building})` : p.label;
+    }
+  }
+  const ids = [[matchPlace($("from").value), "var(--ink)"], [matchPlace($("to").value), "var(--red)"]];
+  for (const [id, color] of ids) {
+    if (!id) continue;
+    const p = graph.nodes.get(id);
+    el("circle", { cx: p.x, cy: -p.y, r: 9 * px, fill: "var(--panel)", stroke: color,
+                   "stroke-width": 4, "vector-effect": "non-scaling-stroke" }, svg);
+  }
+  $("maplegend").innerHTML = (current === "husky"
+    ? `<span style="--c: var(--indoor)">Door into a building</span>`
+    : `<span style="--c: var(--stairs)">Stairs</span>`) +
+    `<span style="--c: var(--ink)">Closed (X)</span><span style="--c: var(--red)">Route</span>` +
+    `<span style="--c: linear-gradient(90deg, rgb(48,18,120), rgb(240,220,40))">Places checked, dark first</span>`;
+}
+
+function toMap(evt) {
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function nearestNode(p, maxDist) {
+  let best = null, bd = maxDist;
+  for (const [id, n] of graph.nodes) {
+    const d = Math.hypot(n.x - p.x, -n.y - p.y);
+    if (d < bd) { bd = d; best = id; }
+  }
+  return best;
+}
+
+function nearestEdge(p, maxDist) {
+  let best = null, bd = maxDist;
+  for (const e of DATA[current].edges) {
+    const a = graph.nodes.get(String(e.u)), b = graph.nodes.get(String(e.v));
+    const ax = a.x, ay = -a.y, bx = b.x, by = -b.y;
+    const L = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
+    const t = Math.max(0, Math.min(1, ((p.x - ax) * (bx - ax) + (p.y - ay) * (by - ay)) / L));
+    const d = Math.hypot(p.x - (ax + t * (bx - ax)), p.y - (ay + t * (by - ay)));
+    if (d < bd) { bd = d; best = e; }
+  }
+  return best;
+}
+
+let drag = null;
+svg.addEventListener("pointerdown", e => {
+  drag = { x: e.clientX, y: e.clientY, vx: view.x, vy: view.y, moved: false };
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener("pointermove", e => {
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+    if (drag.moved) {
+      const px = svg.viewBox.baseVal.width / svg.getBoundingClientRect().width;
+      view.x = drag.vx - dx * px; view.y = drag.vy - dy * px;
+      applyView();
+    }
+    return;
+  }
+  const px = svg.viewBox.baseVal.width / svg.getBoundingClientRect().width;
+  const id = nearestNode(toMap(e), 12 * px);
+  const tip = $("hover");
+  if (id) {
+    const box = svg.getBoundingClientRect();
+    tip.style.display = "block";
+    tip.style.left = (e.clientX - box.left + 12) + "px";
+    tip.style.top = (e.clientY - box.top + 12) + "px";
+    tip.textContent = current === "campus" ? `Node ${id}` : id;
+  } else tip.style.display = "none";
+});
+svg.addEventListener("pointerup", e => {
+  const wasDrag = drag && drag.moved;
+  drag = null;
+  if (wasDrag) { draw(); return; }
+  const px = svg.viewBox.baseVal.width / svg.getBoundingClientRect().width;
+  const p = toMap(e);
+  if (e.shiftKey) {
+    const edge = nearestEdge(p, 10 * px);
+    if (!edge) return;
+    closed.has(edge.seg) ? closed.delete(edge.seg) : closed.add(edge.seg);
+    if (results) findRoute(); else draw();
+    return;
+  }
+  const id = nearestNode(p, 14 * px);
+  if (!id) return;
+  $(clickTurn).value = id;
+  clickTurn = clickTurn === "from" ? "to" : "from";
+  if (matchPlace($("from").value) && matchPlace($("to").value) && clickTurn === "from") findRoute();
+  else draw();
+});
+svg.addEventListener("pointerleave", () => { $("hover").style.display = "none"; });
+svg.addEventListener("wheel", e => {
+  e.preventDefault();
+  const p = toMap(e), k = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+  view = { x: p.x - (p.x - view.x) * k, y: p.y - (p.y - view.y) * k, w: view.w * k, h: view.h * k };
+  draw();
+}, { passive: false });
+
+$("tab-husky").addEventListener("click", () => setMap("husky"));
+$("tab-campus").addEventListener("click", () => setMap("campus"));
+$("go").addEventListener("click", findRoute);
+$("clear").addEventListener("click", () => { closed.clear(); results ? findRoute() : draw(); });
+$("card").addEventListener("keydown", e => { if (e.key === "Enter") findRoute(); });
+["from", "to"].forEach(id => $(id).addEventListener("change", () => {
+  if (matchPlace($("from").value) && matchPlace($("to").value)) findRoute(); else draw();
+}));
+window.addEventListener("resize", () => draw());
+
+setMap("husky");
+</script>
+</body>
+</html>
