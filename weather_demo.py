@@ -46,9 +46,11 @@ def get_weather():
 
 
 # Get current weather
-weather = get_weather()
-
-if weather:
-    print("Weather:", weather["condition"])
-    print("Temperature:", weather["temperature"], "°C")
-    print("Precipitation:", weather["precipitation"], "mm")
+if __name__ == "__main__":
+    # Get current weather
+    weather = get_weather()
+    
+    if weather:
+        print("Weather:", weather["condition"])
+        print("Temperature:", weather["temperature"], "°C")
+        print("Precipitation:", weather["precipitation"], "mm")
