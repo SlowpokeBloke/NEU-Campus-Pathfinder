@@ -9,33 +9,33 @@
 <link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --paper: #EEF1F3;
+    --paper: #F4F4F4;
     --panel: #FFFFFF;
-    --ink: #1C2127;
-    --muted: #5E6873;
-    --line: #C9CFD4;
-    --path: #B4BCC3;
+    --ink: #111111;
+    --muted: #5F5F5F;
+    --line: #D4D4D4;
+    --path: #BDBDBD;
     --red: #C8102E;
     --red-ink: #FFFFFF;
-    --stairs: #D98E04;
-    --indoor: #6B4FA0;
-    --ok: #2E7D4F;
-    --warn: #B3261E;
+    --indoor: #7A3FB0; 
+    --stairs: #D9822B; 
+    --warn: #C8102E; 
+    --ok: #2E7D32;
     color-scheme: light;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --paper: #1A1F24;
-      --panel: #22282E;
-      --ink: #E6E9EC;
-      --muted: #A0A9B2;
-      --line: #3A424A;
-      --path: #4F5862;
+      --paper: #121212;
+      --panel: #1C1C1C;
+      --ink: #EDEDED;
+      --muted: #A6A6A6;
+      --line: #333333;
+      --path: #555555;
       --red: #E0384F;
-      --stairs: #F0A830;
-      --indoor: #A98EE0;
-      --ok: #5FBF85;
-      --warn: #FF8A80;
+      --indoor: #B98AE8; 
+      --stairs: #F0A65A; 
+      --warn: #FF6B7D; 
+      --ok: #66BB6A;
       color-scheme: dark;
     }
   }
@@ -59,10 +59,14 @@
     padding: 0 0 32px;
   }
   .sign {
-    background: var(--red);
-    color: var(--red-ink);
-    padding: 20px 24px 18px;
+    display: flex; align-items: center; gap: 14px;
+    background: #000000;
+    color: #FFFFFF;
+    padding: 18px 24px;
+    border-bottom: 6px solid var(--red);
   }
+  .logo { height: 44px; width: auto; max-width: 120px; object-fit: contain; flex: none; }
+  .sign h1 { flex: 1; min-width: 0; }
   .sign h1 {
     margin: 0;
     font-weight: 800;
@@ -70,19 +74,22 @@
     line-height: 1.1;
     letter-spacing: -0.01em;
   }
-  .sign p { margin: 6px 0 0; font-size: 14px; opacity: 0.92; }
   section { padding: 18px 24px 0; }
   h2 { font-size: 17px; font-weight: 800; margin: 0 0 10px; }
-  .tabs { display: flex; border: 2px solid var(--ink); border-radius: 6px; overflow: hidden; }
-  .tabs button {
-    flex: 1; padding: 9px 0; border: 0; background: transparent; color: var(--ink);
-    font: inherit; font-weight: 600; cursor: pointer;
-  }
-  .tabs button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
   label { display: block; font-weight: 600; font-size: 13px; margin: 12px 0 4px; }
   input, select {
     width: 100%; padding: 8px 10px; font: inherit; color: var(--ink);
     background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
+  }
+  .check { display: flex; align-items: center; gap: 10px; margin: 16px 0 0; font-size: 14px; cursor: pointer; }
+  .check input { width: 18px; height: 18px; margin: 0; accent-color: var(--indoor); }
+  .tip {
+    margin: 14px 0 0; padding: 10px 12px; font-size: 14px; background: var(--paper);
+    border-left: 4px solid var(--indoor); border-radius: 0 4px 4px 0;
+  }
+  .tip button {
+    display: block; margin-top: 8px; font: inherit; font-weight: 800; font-size: 13px; padding: 6px 12px;
+    background: var(--indoor); color: var(--panel); border: 0; border-radius: 4px; cursor: pointer;
   }
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
@@ -118,11 +125,14 @@
   #map .edge { stroke: var(--path); fill: none; vector-effect: non-scaling-stroke; }
   #map .edge.stairs { stroke: var(--stairs); }
   #map .edge.door { stroke: var(--indoor); }
+  #map .edge.covered { stroke: #2F6FB0; }
   #map .edge.closed { stroke: var(--ink); stroke-dasharray: 6 4; }
+  #map .edge.snowblocked { opacity: 0.25; }
   #map .route { stroke: var(--red); fill: none; stroke-linecap: round; stroke-linejoin: round;
                 vector-effect: non-scaling-stroke; }
-  #map .place { font-size: 12px; font-weight: 600; fill: var(--ink); paint-order: stroke;
-                stroke: var(--paper); stroke-width: 3px; }
+  #map .place { font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--paper);
+                stroke-linejoin: round; pointer-events: none; }
+  #map .link { stroke: var(--muted); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
   .maplegend {
     position: absolute; left: 16px; bottom: 16px; background: var(--panel);
     border: 1px solid var(--line); border-radius: 4px; padding: 8px 12px; font-size: 12px;
@@ -147,16 +157,11 @@
 <body>
 <aside>
   <div class="sign">
+        <img class="logo" src="neu-logo.png" alt="Northeastern University" onerror="this.remove()">
     <h1>NEU Campus Pathfinder</h1>
-    <p>Pick a start and a goal. Four search algorithms find the route, and the page shows which one did the least work.</p>
   </div>
 
   <section>
-    <div class="tabs" role="group" aria-label="Map">
-      <button id="tab-husky" aria-pressed="true">Husky Card map</button>
-      <button id="tab-campus" aria-pressed="false">Campus map</button>
-    </div>
-
     <div class="row">
       <div>
         <label for="from">From</label>
@@ -168,38 +173,32 @@
       </div>
     </div>
 
-    <div id="husky-fields" class="row">
-      <div>
-        <label for="card">Husky Card number</label>
-        <input id="card" placeholder="Leave empty for a visitor" inputmode="numeric">
-      </div>
-      <div>
-        <label for="hour">Time</label>
-        <select id="hour"></select>
-      </div>
-    </div>
+    <label class="check"><input type="checkbox" id="usecard"> I have a Husky Card</label>
+   
+    <label for="profile">Walking profile</label>
+    <select id="profile">
+      <option value="fastest">Fastest (stairs allowed)</option>
+      <option value="step_free">Step-free (no stairs)</option>
+    </select>
 
-    <div id="campus-fields" hidden>
-      <label for="profile">Walking profile</label>
-      <select id="profile">
-        <option value="step_free">Step-free (no stairs)</option>
-        <option value="fastest">Fastest (stairs allowed)</option>
-      </select>
-    </div>
+    <label for="weather">Weather for routing</label>
+    <select id="weather"></select>
+    <p class="hint" id="weather-note"></p>
 
-    <p class="hint">Click the map to set From, then To. Shift-click a path to close or reopen it.</p>
+    <p class="hint">Click a building on the map to set From, then To. Shift-click a path to close or reopen it.</p>
 
     <div class="actions">
       <button class="primary" id="go">Find route</button>
       <button class="secondary" id="clear">Reopen paths</button>
     </div>
     <p class="status" id="status" role="status"></p>
+    <div class="tip" id="card-tip" hidden></div>
   </section>
 
   <section id="results" hidden>
     <h2>Algorithms</h2>
     <table class="algo-table">
-      <thead><tr><th>Show</th><th>Algorithm</th><th>Metres</th><th>Steps</th><th>Checked</th><th>ms</th></tr></thead>
+      <thead><tr><th>Show</th><th>Algorithm</th><th>Cost</th><th>Steps</th><th>Checked</th><th>ms</th></tr></thead>
       <tbody id="algo-rows"></tbody>
     </table>
 
@@ -221,15 +220,26 @@
 </aside>
 
 <main>
-  <svg id="map" aria-label="Map of paths"></svg>
+  <svg id="map" aria-label="Map of the Northeastern campus"></svg>
   <div id="hover"></div>
   <div class="maplegend" id="maplegend"></div>
 </main>
 
 <script>
-const DATA = __DATA__;
+const DATA = /*DATA*/null;
+if (!DATA) {
+  document.body.innerHTML = `<div style="max-width:560px;margin:15vh auto;padding:0 24px;font-family:inherit">
+    <h1 style="font-size:24px">This is the page template</h1>
+    <p>It has no map data yet. In the project folder, run:</p>
+    <pre style="background:var(--panel);padding:12px;border:1px solid var(--line)">python3 make_web_app.py</pre>
+    <p>That builds and opens <b>data/processed/route_finder.html</b>, the page to use.</p></div>`;
+  document.body.style.display = "block";
+  throw new Error("Opened the template. Run make_web_app.py and open data/processed/route_finder.html.");
+}
+// CORE START  (JavaScript copy of algorithms.py: change both when you change the search)
 
-// CORE START  (search algorithms, same logic as algorithms.py)
+// Stands in for Python's heapq: a min-heap of [f, tie, node] items,
+// compared by f first and then by tie,
 class MinHeap {
   constructor() { this.a = []; }
   get size() { return this.a.length; }
@@ -264,10 +274,13 @@ class MinHeap {
   }
 }
 
-// A* with weight w: f = g + w * h.  w = 1 is A*, w > 1 is Weighted A*, h = 0 is Dijkstra.
+// A* search:
 function astar(start, goal, neighbors, heuristic, w = 1) {
   const t0 = performance.now();
-  const g = new Map([[start, 0]]), parent = new Map(), closed = new Set(), explored = [];
+  const g = new Map([[start, 0]]);   // cost from start to each node
+  const parent = new Map();          // used to rebuild the path
+  const closed = new Set();          // nodes we are done with
+  const explored = [];               // nodes in the order we expanded them
   let tie = 0;
   const frontier = new MinHeap();
   frontier.push([w * heuristic(start), tie++, start]);
@@ -276,11 +289,14 @@ function astar(start, goal, neighbors, heuristic, w = 1) {
     if (closed.has(node)) continue;
     closed.add(node);
     explored.push(node);
+
     if (node === goal) {
       const path = [goal];
       while (path[path.length - 1] !== start) path.push(parent.get(path[path.length - 1]));
-      return { found: true, path: path.reverse(), cost: g.get(goal), explored, ms: performance.now() - t0 };
+      return { found: true, path: path.reverse(), cost: g.get(goal),
+               explored, ms: performance.now() - t0 };
     }
+
     for (const [nxt, step] of neighbors(node)) {
       if (step === Infinity || closed.has(nxt)) continue;
       const newG = g.get(node) + step;
@@ -294,20 +310,34 @@ function astar(start, goal, neighbors, heuristic, w = 1) {
   return { found: false, path: [], cost: Infinity, explored, ms: performance.now() - t0 };
 }
 
-// BFS: fewest steps, ignores how long each step is.
+// Weighted A*
+function weightedAstar(start, goal, neighbors, heuristic, w = 1.5) {
+  return astar(start, goal, neighbors, heuristic, w);
+}
+
+// BFS: same as bfs() in algorithms.py. 
 function bfs(start, goal, neighbors) {
   const t0 = performance.now();
-  const parent = new Map([[start, null]]), stepCost = new Map([[start, 0]]), explored = [];
+  const parent = new Map([[start, null]]);   // tracks parent nodes and visited nodes
+  const stepCost = new Map([[start, 0]]);
+  const explored = [];
   const queue = [start];
-  let head = 0;
+  let head = 0;                             // stands in for deque.popleft()
+
   while (head < queue.length) {
     let node = queue[head++];
     explored.push(node);
+
     if (node === goal) {
       const path = []; let cost = 0;
-      while (node !== null) { path.push(node); cost += stepCost.get(node); node = parent.get(node); }
+      while (node !== null) {
+        path.push(node);
+        cost += stepCost.get(node);
+        node = parent.get(node);
+      }
       return { found: true, path: path.reverse(), cost, explored, ms: performance.now() - t0 };
     }
+
     for (const [nxt, step] of neighbors(node)) {
       if (step === Infinity || parent.has(nxt)) continue;
       parent.set(nxt, node);
@@ -318,7 +348,12 @@ function bfs(start, goal, neighbors) {
   return { found: false, path: [], cost: Infinity, explored, ms: performance.now() - t0 };
 }
 
+// Heuristics
+
 const EARTH_RADIUS_M = 6371009;
+
+// Same formula as haversine() in algorithms.py. 
+// graph and a goal; here it takes two nodes with lat and lon, since the page has no graph object.
 function haversine(a, b) {
   const lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
   const dlat = lat2 - lat1, dlon = (b.lon - a.lon) * Math.PI / 180;
@@ -326,48 +361,8 @@ function haversine(a, b) {
   return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 }
 
-// SHA-256, so card numbers are hashed the same way as husky_card_demo.py
-function sha256(text) {
-  const K = [0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
-    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
-    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
-    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
-    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
-    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
-    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
-    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
-  const bytes = Array.from(new TextEncoder().encode(text));
-  const bitLen = bytes.length * 8;
-  bytes.push(0x80);
-  while (bytes.length % 64 !== 56) bytes.push(0);
-  for (let i = 7; i >= 0; i--) bytes.push(Math.floor(bitLen / 2 ** (8 * i)) & 0xff);
-  let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
-  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
-  for (let off = 0; off < bytes.length; off += 64) {
-    const W = new Array(64);
-    for (let i = 0; i < 16; i++) {
-      const j = off + 4 * i;
-      W[i] = (bytes[j] << 24) | (bytes[j + 1] << 16) | (bytes[j + 2] << 8) | bytes[j + 3];
-    }
-    for (let i = 16; i < 64; i++) {
-      const s0 = rotr(W[i-15], 7) ^ rotr(W[i-15], 18) ^ (W[i-15] >>> 3);
-      const s1 = rotr(W[i-2], 17) ^ rotr(W[i-2], 19) ^ (W[i-2] >>> 10);
-      W[i] = (W[i-16] + s0 + W[i-7] + s1) | 0;
-    }
-    let [a, b, c, d, e, f, g, h] = H;
-    for (let i = 0; i < 64; i++) {
-      const S1 = rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25);
-      const t1 = (h + S1 + ((e & f) ^ (~e & g)) + K[i] + W[i]) | 0;
-      const S0 = rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22);
-      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) | 0;
-      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
-    }
-    H = H.map((x, i) => (x + [a, b, c, d, e, f, g, h][i]) | 0);
-  }
-  return H.map(x => (x >>> 0).toString(16).padStart(8, "0")).join("");
-}
+// Helpers for the page's graph
 
-// Build the search inputs for one map
 function buildGraph(map) {
   const nodes = new Map(map.nodes.map(n => [String(n.id), n]));
   const adj = new Map([...nodes.keys()].map(id => [id, []]));
@@ -378,15 +373,7 @@ function buildGraph(map) {
   return { nodes, adj };
 }
 
-function lockedBuildings(husky, card, hour) {
-  const allowed = new Set(card ? (husky.access[sha256(husky.salt + card)] || []) : []);
-  const locked = new Set();
-  for (const [b, [open, close]] of Object.entries(husky.hours)) {
-    if (!(open <= hour && hour < close) && !allowed.has(b)) locked.add(b);
-  }
-  return { locked, known: card ? (sha256(husky.salt + card) in husky.access) : null };
-}
-
+// Same idea as networkx_neighbors() in algorithms.py:
 function makeNeighbors(graph, costOf) {
   return node => {
     const best = new Map();
@@ -401,55 +388,120 @@ function makeNeighbors(graph, costOf) {
 function runAll(start, goal, neighbors, heuristic) {
   return {
     "A*": astar(start, goal, neighbors, heuristic),
-    "Weighted A* (w=1.5)": astar(start, goal, neighbors, heuristic, 1.5),
+    "Weighted A* (w=1.5)": weightedAstar(start, goal, neighbors, heuristic),
     "Dijkstra (no heuristic)": astar(start, goal, neighbors, () => 0),
     "BFS (fewest steps)": bfs(start, goal, neighbors),
   };
 }
 // CORE END
 
+// ---------- Weather ----------
+// Outdoor paths count as longer in bad weather. Covered and indoor paths don't.
+// Every cost stays >= its length, so the straight-line heuristic is still admissible.
+
+function weatherCondition() {
+  const v = document.getElementById("weather").value;
+  return v === "live" ? (DATA.weather ? DATA.weather.condition : "Normal") : v;
+}
+
+// In rain or snow, only sheltered paths can be used. Any other weather allows every path.
+const SHELTER_WEATHER = new Set(["Rain", "Snow"]);
+function shelteredOnly() {
+  return SHELTER_WEATHER.has(weatherCondition());
+}
+function isSheltered(e) {        
+  return !!(e.covered || e.door);
+}
+
 // ---------- Page ----------
 const $ = id => document.getElementById(id);
 const svg = $("map");
 const NS = "http://www.w3.org/2000/svg";
-let current = "husky";
-let graph, closed = new Set(), results = null, shown = null, clickTurn = "from", view = null;
+const MAP = DATA.campus;
+const PLACES = MAP.places;                       // Northeastern buildings only
+const CARD = MAP.card;                           // { hours }, keyed by building name
+const CARD_BUILDINGS = Object.keys(CARD.hours);
+const graph = buildGraph(MAP);
+const placeByName = new Map(PLACES.map(p => [p.name, p]));
+const placeAtNode = new Map();
+for (const p of PLACES) if (!placeAtNode.has(p.node)) placeAtNode.set(p.node, p.name);
+let closed = new Set(), results = null, shown = null, clickTurn = "from", view = null;
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const listNames = names => names.length < 3 ? names.join(" and ") : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
 
-for (let h = 0; h < 24; h++) {
-  const o = document.createElement("option");
-  o.value = h; o.textContent = `${String(h).padStart(2, "0")}:00`;
-  if (h === 23) o.selected = true;
-  $("hour").append(o);
+// ---------- Entrances ----------
+// Uses p.entrances (a list of node ids) when the data has it. Otherwise any path
+// junction within ENTRANCE_RADIUS_M of the building counts as an entrance.
+const ENTRANCE_RADIUS_M = 30;
+const S = "__start__", G = "__goal__";   // virtual start and goal nodes
+const entranceCache = new Map();
+
+function entrancesOf(name) {
+  if (entranceCache.has(name)) return entranceCache.get(name);
+  const p = placeByName.get(name);
+  let ids = [];
+  if (p) {
+    if (Array.isArray(p.entrances) && p.entrances.length) {
+      ids = p.entrances.map(String);
+    } else {
+      const set = new Set([String(p.node)]);
+      for (const [id, n] of graph.nodes)
+        if (Math.hypot(n.x - p.x, n.y - p.y) <= ENTRANCE_RADIUS_M) set.add(id);
+      ids = [...set];
+    }
+  }
+  entranceCache.set(name, ids);
+  return ids;
 }
 
-function setMap(name) {
-  current = name;
-  const map = DATA[name];
-  graph = buildGraph(map);
-  closed = new Set(); results = null; shown = null; clickTurn = "from";
-  $("tab-husky").setAttribute("aria-pressed", name === "husky");
-  $("tab-campus").setAttribute("aria-pressed", name === "campus");
-  $("husky-fields").hidden = name !== "husky";
-  $("campus-fields").hidden = name !== "campus";
-  $("results").hidden = true;
-  const sorted = map.kind === "campus"
-    ? [...map.nodes].sort((a, b) => Number(a.id) - Number(b.id) || String(a.id).localeCompare(String(b.id)))
-    : map.nodes;
-  const options = `<option value="">Choose a place</option>` + sorted.map(n => {
-    const text = n.building ? `${n.id} (${n.building})`
-      : n.label && n.label !== String(n.id) ? n.label
-      : map.kind === "campus" ? `Node ${n.id}` : n.id;
-    return `<option value="${String(n.id)}">${text}</option>`;
-  }).join("");
+// Wraps a neighbors function so the search runs from S (all start entrances)
+// to G (any goal entrance). h = straight line to the nearest goal entrance.
+function withEntrances(startIds, goalIds, neighbors) {
+  const goals = new Set(goalIds);
+  const goalPts = goalIds.map(id => graph.nodes.get(id));
+  const cache = new Map();
+  const heuristic = id => {
+    if (id === G) return 0;
+    if (id === S) return Math.min(...startIds.map(heuristic));
+    if (!cache.has(id)) {
+      const n = graph.nodes.get(id);
+      cache.set(id, Math.min(...goalPts.map(q => haversine(n, q))));
+    }
+    return cache.get(id);
+  };
+  const nb = id => {
+    if (id === S) return new Map(startIds.map(s => [s, 0]));
+    const m = new Map(neighbors(id));
+    if (goals.has(id)) m.set(G, 0);
+    return m;
+  };
+  return { nb, heuristic };
+}
+
+// Removes the virtual nodes from a search result
+function stripVirtual(r) {
+  r.explored = r.explored.filter(id => id !== S && id !== G);
+  if (r.found) r.path = r.path.filter(id => id !== S && id !== G);
+  return r;
+}
+
+{
+  const w = DATA.weather;
+  $("weather").innerHTML =
+    `<option value="live">${w ? `Current weather: ${w.condition}` : "Current weather (unavailable)"}</option>` +
+    ["Normal", "Rain", "Snow"].map(c => `<option value="${c}">${c}</option>`).join("");
+  $("weather-note").textContent = w
+    ? `At Northeastern when this page was built: ${w.condition}, ${w.temperature} °C, ${w.precipitation} mm. Rebuild the page to update it.`
+    : "The weather service couldn't be reached when this page was built, so current weather counts as Normal.";
+  $("weather").addEventListener("change", () => { if (results) findRoute(); else draw(); });
+}
+
+{
+  const sorted = [...PLACES].sort((a, b) => a.name.localeCompare(b.name));
+  const options = `<option value="">Choose a building</option>` +
+    sorted.map(p => `<option value="${esc(p.name)}">${esc(p.name)}</option>`).join("");
   $("from").innerHTML = options;
   $("to").innerHTML = options;
-  $("from").value = map.start || "";
-  $("to").value = map.goal || "";
-  setStatus(name === "campus"
-    ? `Using the ${map.source}. ${map.nodes.length} places, ${map.edges.length} paths.`
-    : "Doors into Marino and Curry lock at night unless your card opens them.");
-  fitView();
-  draw();
 }
 
 function setStatus(text, error = false) {
@@ -457,50 +509,92 @@ function setStatus(text, error = false) {
   $("status").className = "status" + (error ? " error" : "");
 }
 
-function matchPlace(value) {
-  return value && graph.nodes.has(value) ? value : null;
+// With a Husky Card every card door is open. Without one every card door is locked.
+function cardInfo() {
+  return $("usecard").checked
+    ? { on: true, locked: new Set(), note: "Husky Card: all card doors open." }
+    : { on: false, locked: new Set(CARD_BUILDINGS), note: "" };
+}
+
+function costFn(profile, lockedSet) {
+  return e => (closed.has(e.seg)
+      || (profile === "step_free" && e.steps)
+      || (e.door && lockedSet.has(e.door))
+      || (shelteredOnly() && !isSheltered(e)))
+    ? Infinity : e.len;
+}
+
+// Card buildings a path goes through, in order
+function doorsOnPath(path) {
+  const doors = [];
+  for (let i = 1; i < path.length; i++) {
+    let best = null;
+    for (const { to, e } of graph.adj.get(path[i - 1])) {
+      if (to === path[i] && (!best || e.len < best.len)) best = e;
+    }
+    if (best && best.door && !doors.includes(best.door)) doors.push(best.door);
+  }
+  return doors;
+}
+
+// Suggest a shorter route that needs a Husky Card when there is one
+function showCardTip(startIds, goalIds, profile, base, info) {
+  const tip = $("card-tip");
+  tip.hidden = true;
+  if (info.on || !CARD_BUILDINGS.length) return;
+  const w = withEntrances(startIds, goalIds, makeNeighbors(graph, costFn(profile, new Set())));
+  const open = stripVirtual(astar(S, G, w.nb, w.heuristic));
+  if (!open.found) return;
+  const doors = doorsOnPath(open.path);
+  if (!doors.length) return;
+  const saves = base.found ? base.cost - open.cost : Infinity;
+  if (saves < 5) return;
+  const gain = base.found
+    ? `${saves.toFixed(0)} m shorter, ${open.cost.toFixed(0)} m instead of ${base.cost.toFixed(0)} m`
+    : "the only way to get there";
+  tip.innerHTML = `<b>A route with a Husky Card is available.</b> Going through ${esc(listNames(doors))} is ${gain}.
+    <button id="tip-use">Use my Husky Card</button>`;
+  tip.hidden = false;
+  $("tip-use").addEventListener("click", () => { $("usecard").checked = true; findRoute(); });
 }
 
 function findRoute() {
-  const map = DATA[current];
-  const start = matchPlace($("from").value), goal = matchPlace($("to").value);
-  if (!start || !goal) {
-    setStatus(`Choose a ${!start ? "start" : "goal"} from the list or click the map.`, true);
+  const from = $("from").value, to = $("to").value;
+  const startIds = entrancesOf(from), goalIds = entrancesOf(to);
+  $("card-tip").hidden = true;
+  if (!startIds.length || !goalIds.length) {
+    setStatus(`Choose a ${!startIds.length ? "start" : "goal"} building from the list or click it on the map.`, true);
     return;
   }
-  let costOf, heuristic, note;
-  if (current === "husky") {
-    const card = $("card").value.trim();
-    const hour = Number($("hour").value);
-    const { locked, known } = lockedBuildings(map, card, hour);
-    costOf = e => (closed.has(e.seg) || (e.door && locked.has(e.door))) ? Infinity : e.len;
-    const g = graph.nodes.get(goal);
-    heuristic = id => { const n = graph.nodes.get(id); return Math.hypot(g.x - n.x, g.y - n.y); };
-    const who = !card ? "Visitor" : known ? "Card recognised" : "Card not recognised, treated as a visitor";
-    note = `${who} at ${String(hour).padStart(2, "0")}:00. Locked: ${[...locked].sort().join(", ") || "nothing"}.`;
-    graph.locked = locked;
-  } else {
-    const profile = $("profile").value;
-    costOf = e => (closed.has(e.seg) || (profile === "step_free" && e.steps)) ? Infinity : e.len;
-    const g = graph.nodes.get(goal), cache = new Map();
-    heuristic = id => {
-      if (!cache.has(id)) cache.set(id, haversine(graph.nodes.get(id), g));
-      return cache.get(id);
-    };
-    note = `Profile: ${profile === "step_free" ? "step-free, stairs blocked" : "fastest, stairs allowed"}.`;
-    graph.locked = new Set();
+  if (from === to) {
+    setStatus("Choose two different buildings.", true);
+    return;
   }
-  if (closed.size) note += ` ${closed.size} path${closed.size > 1 ? "s" : ""} closed by you.`;
-  const neighbors = makeNeighbors(graph, costOf);
-  results = runAll(start, goal, neighbors, heuristic);
-  if (!results["A*"].found) {
-    setStatus(`No route from ${start} to ${goal}: every way is blocked. ${note}`, true);
+  const profile = $("profile").value;
+  const info = cardInfo();
+
+  let note = `Profile: ${profile === "step_free" ? "step-free, stairs blocked" : "fastest, stairs allowed"}.`;
+  if (info.note) note += " " + info.note;
+  const cond = weatherCondition();
+  if (shelteredOnly())
+    note += ` ${cond}: only tunnels, covered walkways and indoor paths are used.`;
+  const neighbors = makeNeighbors(graph, costFn(profile, info.locked));
+  const { nb, heuristic } = withEntrances(startIds, goalIds, neighbors);
+  results = runAll(S, G, nb, heuristic);
+  for (const r of Object.values(results)) stripVirtual(r);
+  showCardTip(startIds, goalIds, profile, results["A*"], info);
+    if (!results["A*"].found) {
+    setStatus(shelteredOnly()
+      ? `No covered route from ${from} to ${to}. There is no way to get there using only tunnels and covered paths. ${note}`
+      : `No route from ${from} to ${to}: every way is blocked. ${note}`, true);
     $("results").hidden = true; shown = null; draw();
     return;
   }
   setStatus(note);
   const rows = traceRoute(results["A*"].path, neighbors, heuristic);
   const { pick, lines } = recommend(results, rows);
+  const doors = doorsOnPath(results["A*"].path);
+  if (doors.length) lines.unshift(`This route goes through <b>${esc(listNames(doors))}</b>, which needs a Husky Card.`);
   shown = pick;
   showTable(pick);
   $("advice").innerHTML = lines.map(l => `<li>${l}</li>`).join("");
@@ -561,9 +655,16 @@ function showTable(pick) {
     el.addEventListener("change", () => { shown = el.value; draw(true); }));
 }
 
+// Buildings are named
+function labelOf(id, i, last) {
+  if (i === 0) return $("from").value;
+  if (i === last) return $("to").value;
+  return placeAtNode.get(id) || graph.nodes.get(id).label || "Walkway";
+}
+
 function showTrace(rows) {
   $("trace-rows").innerHTML = rows.map((r, i) => `
-    <tr><td>${i}</td><td>${r.node}</td><td>${r.g.toFixed(0)}</td><td>${r.h.toFixed(0)}</td>
+    <tr><td>${i}</td><td>${esc(labelOf(r.node, i, rows.length - 1))}</td><td>${r.g.toFixed(0)}</td><td>${r.h.toFixed(0)}</td>
     <td>${r.left.toFixed(0)}</td><td class="${r.h <= r.left + 1e-6 ? "yes" : "no"}">${r.h <= r.left + 1e-6 ? "yes" : "no"}</td></tr>`).join("");
 }
 
@@ -591,12 +692,14 @@ function drawChart(rows) {
 }
 
 // ---------- Map drawing, pan and zoom ----------
+// The first view is the campus: the buildings with some room around them.
 function fitView() {
-  const xs = DATA[current].nodes.map(n => n.x), ys = DATA[current].nodes.map(n => -n.y);
+  const pts = PLACES.length ? PLACES : MAP.nodes;
+  const xs = pts.map(n => n.x), ys = pts.map(n => -n.y);
   const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
-  const pad = Math.max(maxX - minX, maxY - minY) * 0.08 + 10;
-  const right = current === "husky" ? (maxX - minX) * 0.35 : 0;   // room for place names
-  view = { x: minX - pad, y: minY - pad, w: maxX - minX + 2 * pad + right, h: maxY - minY + 2 * pad };
+  const pad = Math.max(maxX - minX, maxY - minY) * 0.1 + 30;
+  const labels = PLACES.length ? (maxX - minX) * 0.14 : 0;   // room for the names at the right edge
+  view = { x: minX - pad, y: minY - pad, w: maxX - minX + 2 * pad + labels, h: maxY - minY + 2 * pad };
 }
 
 function applyView() {
@@ -624,76 +727,93 @@ function exploredColor(t) {   // dark blue to yellow, by the order nodes were ch
   return `rgb(${c})`;
 }
 
+function crossAt(a, b, px) {
+  const mx = (a.x + b.x) / 2, my = -(a.y + b.y) / 2, s = 6 * px;
+  el("path", { d: `M${mx - s},${my - s}L${mx + s},${my + s}M${mx - s},${my + s}L${mx + s},${my - s}`,
+               stroke: "var(--ink)", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, svg);
+}
+
 function draw(animate = false) {
   const px = applyView();
   svg.innerHTML = "";
-  const map = DATA[current];
-  const locked = graph.locked || new Set();
   const gEdges = el("g", {}, svg);
-  for (const e of map.edges) {
-    const a = graph.nodes.get(String(e.u)), b = graph.nodes.get(String(e.v));
+  const cardOn = $("usecard").checked;
+  for (const e of MAP.edges) {
+    if (e.door && !cardOn) continue;          // hide card-only paths without a Husky Card
+    const a = graph.nodes.get(e.u), b = graph.nodes.get(e.v);
     let cls = "edge";
     if (e.steps) cls += " stairs";
     if (e.door) cls += " door";
-    if (closed.has(e.seg) || (e.door && locked.has(e.door))) cls += " closed";
+    else if (e.covered) cls += " covered";
+    if (closed.has(e.seg)) cls += " closed";
+    if (shelteredOnly() && !isSheltered(e)) cls += " snowblocked"; 
     el("line", { x1: a.x, y1: -a.y, x2: b.x, y2: -b.y, class: cls,
                  "stroke-width": e.steps || e.door ? 3 : 1.6 }, gEdges);
   }
-  if (current === "husky") {   // mark locked doors with an X
-    for (const e of map.edges) {
-      if (!(e.door && locked.has(e.door)) && !closed.has(e.seg)) continue;
-      const a = graph.nodes.get(e.u), b = graph.nodes.get(e.v);
-      const mx = (a.x + b.x) / 2, my = -(a.y + b.y) / 2, s = 6 * px;
-      el("path", { d: `M${mx - s},${my - s}L${mx + s},${my + s}M${mx - s},${my + s}L${mx + s},${my - s}`,
-                   stroke: "var(--ink)", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, svg);
-    }
-  } else if (closed.size) {
-    for (const e of map.edges) {
-      if (!closed.has(e.seg)) continue;
-      const a = graph.nodes.get(e.u), b = graph.nodes.get(e.v);
-      const mx = (a.x + b.x) / 2, my = -(a.y + b.y) / 2, s = 6 * px;
-      el("path", { d: `M${mx - s},${my - s}L${mx + s},${my + s}M${mx - s},${my + s}L${mx + s},${my - s}`,
-                   stroke: "var(--ink)", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, svg);
-    }
+  for (const e of MAP.edges) {
+    if (e.door && !cardOn) continue;
+    if (closed.has(e.seg)) crossAt(graph.nodes.get(e.u), graph.nodes.get(e.v), px);
   }
   const r = shown && results ? results[shown] : null;
   if (r) {
     const gEx = el("g", {}, svg), n = r.explored.length;
     r.explored.forEach((id, i) => {
       const p = graph.nodes.get(id);
-      el("circle", { cx: p.x, cy: -p.y, r: (current === "husky" ? 7 : 3.5) * px,
+      el("circle", { cx: p.x, cy: -p.y, r: 3.5 * px,
                      fill: exploredColor(n > 1 ? i / (n - 1) : 0), opacity: 0.85 }, gEx);
     });
     if (r.found) {
       const d = r.path.map((id, i) => { const p = graph.nodes.get(id); return `${i ? "L" : "M"}${p.x},${-p.y}`; }).join("");
       const route = el("path", { d, class: "route", "stroke-width": 5 }, svg);
       if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        const len = route.getTotalLength();
-        route.style.strokeDasharray = len; route.style.strokeDashoffset = len;
+        const len = route.getTotalLength() / px + 2;
+        route.style.strokeDasharray = `${len} ${len}`;
+        route.style.strokeDashoffset = len;
         route.getBoundingClientRect();
         route.style.transition = "stroke-dashoffset 900ms ease-out";
         route.style.strokeDashoffset = 0;
+        route.addEventListener("transitionend", () => {
+          route.style.strokeDasharray = "";
+          route.style.strokeDashoffset = "";
+          route.style.transition = "";
+        }, { once: true });
       }
     }
   }
-  if (current === "husky") {
-    for (const p of map.nodes) {
-      el("circle", { cx: p.x, cy: -p.y, r: 4 * px, fill: "var(--ink)" }, svg);
-      el("text", { x: p.x + 8 * px, y: -p.y - 8 * px, class: "place",
-                   "font-size": 12 * px, "stroke-width": 3 * px }, svg).textContent =
-        p.building ? `${p.label} (${p.building})` : p.label;
-    }
+
+  // Buildings: a dot, a thin link to the path junction it connects to, and a name
+  // that is skipped when it would sit on top of another name.
+  const sel = new Map();
+  if ($("from").value) sel.set($("from").value, "var(--ink)");
+  if ($("to").value) sel.set($("to").value, "var(--red)");
+  for (const p of PLACES) {
+    const n = graph.nodes.get(p.node);
+    if (Math.hypot(n.x - p.x, -n.y + p.y) > 5 * px)
+      el("line", { x1: p.x, y1: -p.y, x2: n.x, y2: -n.y, class: "link" }, svg);
   }
-  const ids = [[matchPlace($("from").value), "var(--ink)"], [matchPlace($("to").value), "var(--red)"]];
-  for (const [id, color] of ids) {
-    if (!id) continue;
-    const p = graph.nodes.get(id);
-    el("circle", { cx: p.x, cy: -p.y, r: 9 * px, fill: "var(--panel)", stroke: color,
+  for (const p of PLACES) {
+        el("circle", { cx: p.x, cy: -p.y, r: 4.5 * px, fill: p.card && cardOn ? "var(--indoor)" : "var(--ink)",
+                   stroke: "var(--panel)", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" }, svg);
+  }
+  for (const [name, color] of sel) {
+    const p = placeByName.get(name);
+    el("circle", { cx: p.x, cy: -p.y, r: 9 * px, fill: "none", stroke: color,
                    "stroke-width": 4, "vector-effect": "non-scaling-stroke" }, svg);
   }
-  $("maplegend").innerHTML = (current === "husky"
-    ? `<span style="--c: var(--indoor)">Door into a building</span>`
-    : `<span style="--c: var(--stairs)">Stairs</span>`) +
+  const fs = 12 * px, charW = 6.5 * px, boxes = [];
+  const order = [...PLACES].sort((a, b) => (sel.has(b.name) - sel.has(a.name)) || a.name.localeCompare(b.name));
+  for (const p of order) {
+    const w = p.name.length * charW, h = fs * 1.15, x0 = p.x + 13 * px, y0 = -p.y - h / 2;
+    const overlaps = boxes.some(b => x0 < b[2] && x0 + w > b[0] && y0 < b[3] && y0 + h > b[1]);
+    if (overlaps && !sel.has(p.name)) continue;
+    boxes.push([x0, y0, x0 + w, y0 + h]);
+    const t = el("text", { x: x0, y: -p.y + fs * 0.35, class: "place", "font-size": fs, "stroke-width": 3 * px }, svg);
+    t.textContent = p.name;
+  }
+
+  $("maplegend").innerHTML =
+    `<span style="--c: var(--stairs)">Stairs</span><span style="--c: #2F6FB0">Covered</span>` +
+    (cardOn ? `<span style="--c: var(--indoor)">Needs Husky Card</span>` : "") +
     `<span style="--c: var(--ink)">Closed (X)</span><span style="--c: var(--red)">Route</span>` +
     `<span style="--c: linear-gradient(90deg, rgb(48,18,120), rgb(240,220,40))">Places checked, dark first</span>`;
 }
@@ -704,19 +824,21 @@ function toMap(evt) {
   return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
-function nearestNode(p, maxDist) {
+function nearestPlace(p, maxDist) {
   let best = null, bd = maxDist;
-  for (const [id, n] of graph.nodes) {
-    const d = Math.hypot(n.x - p.x, -n.y - p.y);
-    if (d < bd) { bd = d; best = id; }
+  for (const pl of PLACES) {
+    const d = Math.hypot(pl.x - p.x, -pl.y - p.y);
+    if (d < bd) { bd = d; best = pl.name; }
   }
   return best;
 }
 
 function nearestEdge(p, maxDist) {
   let best = null, bd = maxDist;
-  for (const e of DATA[current].edges) {
-    const a = graph.nodes.get(String(e.u)), b = graph.nodes.get(String(e.v));
+  const cardOn = $("usecard").checked;
+  for (const e of MAP.edges) {
+    if (e.door && !cardOn) continue;          // skip hidden card-only paths
+    const a = graph.nodes.get(e.u), b = graph.nodes.get(e.v);
     const ax = a.x, ay = -a.y, bx = b.x, by = -b.y;
     const L = (bx - ax) ** 2 + (by - ay) ** 2 || 1;
     const t = Math.max(0, Math.min(1, ((p.x - ax) * (bx - ax) + (p.y - ay) * (by - ay)) / L));
@@ -743,14 +865,14 @@ svg.addEventListener("pointermove", e => {
     return;
   }
   const px = svg.viewBox.baseVal.width / svg.getBoundingClientRect().width;
-  const id = nearestNode(toMap(e), 12 * px);
+  const name = nearestPlace(toMap(e), 12 * px);
   const tip = $("hover");
-  if (id) {
+  if (name) {
     const box = svg.getBoundingClientRect();
     tip.style.display = "block";
     tip.style.left = (e.clientX - box.left + 12) + "px";
     tip.style.top = (e.clientY - box.top + 12) + "px";
-    tip.textContent = current === "campus" ? `Node ${id}` : id;
+    tip.textContent = name;
   } else tip.style.display = "none";
 });
 svg.addEventListener("pointerup", e => {
@@ -766,11 +888,11 @@ svg.addEventListener("pointerup", e => {
     if (results) findRoute(); else draw();
     return;
   }
-  const id = nearestNode(p, 14 * px);
-  if (!id) return;
-  $(clickTurn).value = id;
+  const name = nearestPlace(p, 14 * px);
+  if (!name) return;
+  $(clickTurn).value = name;
   clickTurn = clickTurn === "from" ? "to" : "from";
-  if (matchPlace($("from").value) && matchPlace($("to").value) && clickTurn === "from") findRoute();
+  if ($("from").value && $("to").value && clickTurn === "from") findRoute();
   else draw();
 });
 svg.addEventListener("pointerleave", () => { $("hover").style.display = "none"; });
@@ -781,17 +903,25 @@ svg.addEventListener("wheel", e => {
   draw();
 }, { passive: false });
 
-$("tab-husky").addEventListener("click", () => setMap("husky"));
-$("tab-campus").addEventListener("click", () => setMap("campus"));
 $("go").addEventListener("click", findRoute);
 $("clear").addEventListener("click", () => { closed.clear(); results ? findRoute() : draw(); });
-$("card").addEventListener("keydown", e => { if (e.key === "Enter") findRoute(); });
+$("usecard").addEventListener("change", () => {
+  if ($("from").value && $("to").value) findRoute(); else draw();
+});
+["profile"].forEach(id => $(id).addEventListener("change", () => {
+  if ($("from").value && $("to").value) findRoute();
+}));
 ["from", "to"].forEach(id => $(id).addEventListener("change", () => {
-  if (matchPlace($("from").value) && matchPlace($("to").value)) findRoute(); else draw();
+  if ($("from").value && $("to").value) findRoute(); else draw();
 }));
 window.addEventListener("resize", () => draw());
 
-setMap("husky");
+setStatus(PLACES.length
+  ? `Showing ${PLACES.length} Northeastern buildings and ${MAP.edges.length} paths around them.`
+  : "No Northeastern buildings were found.", //Run neu_buildings.py with an internet connection, then rebuild this page
+  !PLACES.length);
+fitView();
+draw();
 </script>
 </body>
 </html>
