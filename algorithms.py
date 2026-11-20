@@ -131,3 +131,159 @@ def path_edges(G, path, cost_fn):
     """Return the edges (u, v, key) used by a path."""
     return [(u, v, min(G[u][v], key=lambda k: cost_fn(u, v, k, G[u][v][k])))
             for u, v in zip(path[:-1], path[1:])]
+
+# D* Lite search algorithm (Koenig & Likhachev, 2002)
+#implemented by mCoca
+#
+# D* Lite searches backward from the goal, so g(s) is the cost-to-goal of s and the path is read forward from the start by always stepping to the neighbor with the smallest c(s, s') + g(s').
+#  When edge costs change (a path closes, a door locks) only the affected vertices are repaired instead of searching again.
+#
+# Difference from astar(): the heuristic takes two nodes, heuristic(a, b) = estimate of the distance between a and b (evaluated from the current start to each vertex). Use euclidean_pair() / haversine_pair() below.
+
+class DStarLite:
+    def __init__(self, start, goal, neighbors, heuristic, predecessors=None):
+        """neighbors(n) -> (next, cost) pairs, and must read the CURRENT costs.
+        predecessors(n) -> (prev, cost of prev->n) pairs; if omitted the graph is
+        assumed symmetric (true for the campus and Husky maps)."""
+        self.start, self.goal, self.last = start, goal, start
+        self.succ = neighbors
+        self.pred = predecessors or neighbors
+        self.h = heuristic
+        self.km = 0.0
+        self.g, self.rhs = {}, {}            # missing entries mean infinity
+        self.U, self.key_of = [], {}         # priority queue with lazy deletion
+        self.tie = itertools.count()
+        self.explored, self.seen = [], set()
+        self.expansions = 0
+        self.rhs[goal] = 0.0                 # init
+        self._insert(goal)
+
+    def _g(self, s):
+        return self.g.get(s, math.inf)
+
+    def _rhs(self, s):
+        return self.rhs.get(s, math.inf)
+
+    def calc_key(self, s):
+        m = min(self._g(s), self._rhs(s))
+        return (m + self.h(self.start, s) + self.km, m)
+
+    def _insert(self, u):
+        k = self.calc_key(u)
+        self.key_of[u] = k
+        heapq.heappush(self.U, (k, next(self.tie), u))
+
+    def _top(self):
+        """Smallest valid (key, node) in U, or ((inf, inf), None) if U is empty."""
+        while self.U:
+            k, _, u = self.U[0]
+            if self.key_of.get(u) == k:
+                return k, u
+            heapq.heappop(self.U)            # stale entry
+        return (math.inf, math.inf), None
+
+    def update_vertex(self, u):
+        if u != self.goal:
+            self.rhs[u] = min((c + self._g(v) for v, c in self.succ(u)
+                               if c != math.inf), default=math.inf)
+        self.key_of.pop(u, None)             # remove u from U if it is there
+        if self._g(u) != self._rhs(u):
+            self._insert(u)
+
+    def compute_shortest_path(self):
+        while True:
+            k_top, u = self._top()
+            if u is None or not (k_top < self.calc_key(self.start)
+                                 or self._rhs(self.start) != self._g(self.start)):
+                return
+            k_new = self.calc_key(u)
+            if k_top < k_new:                # if key is out of date, reinsert
+                self._insert(u)
+                continue
+            self.key_of.pop(u, None)
+            self.expansions += 1
+            if u not in self.seen:
+                self.seen.add(u)
+                self.explored.append(u)
+            if self._g(u) > self._rhs(u):    # if g is overconsistent: lower g
+                self.g[u] = self._rhs(u)
+                for s, _ in self.pred(u):
+                    self.update_vertex(s)
+            else:                            # else if g is underconsistent: raise to infinity
+                self.g[u] = math.inf
+                for s, _ in self.pred(u):
+                    self.update_vertex(s)
+                self.update_vertex(u)
+
+    def next_step(self, s):
+        """Best neighbor of s: argmin c(s, s') + g(s')."""
+        best, best_cost = None, math.inf
+        for v, c in self.succ(s):
+            if c != math.inf and c + self._g(v) < best_cost:
+                best, best_cost = v, c + self._g(v)
+        return best
+
+    def path(self):
+        """Route from the current start to the goal, or [] if none exists."""
+        if self._g(self.start) == math.inf:
+            return []
+        path, node, seen = [self.start], self.start, {self.start}
+        while node != self.goal:
+            node = self.next_step(node)
+            if node is None or node in seen:
+                return []
+            seen.add(node)
+            path.append(node)
+        return path
+
+    def path_cost(self, path):
+        return sum(dict(self.succ(u))[v] for u, v in zip(path[:-1], path[1:]))
+
+    def move_start(self, new_start):
+        """The agent moved: shift the heuristic origin (km) before the next replan."""
+        self.km += self.h(self.last, new_start)
+        self.last = self.start = new_start
+
+    def replan(self, changed_nodes, new_start=None):
+        """Call after edge costs changed. changed_nodes are the endpoints (u and v)
+        of every edge whose cost changed. Returns a result dict like astar()."""
+        t0 = time.perf_counter()
+        before = self.expansions
+        if new_start is not None and new_start != self.start:
+            self.move_start(new_start)
+        for u in changed_nodes:
+            self.update_vertex(u)
+        self.compute_shortest_path()
+        return self.result(t0, self.expansions - before)
+
+    def result(self, t0, expansions=None):
+        path = self.path()
+        return {"found": bool(path), "path": path,
+                "cost": self.path_cost(path) if path else math.inf,
+                "explored": list(self.explored), "expansions": expansions,
+                "runtime_s": time.perf_counter() - t0}
+
+
+def dstar_lite(start, goal, neighbors, heuristic, predecessors=None):
+    """One-shot D* Lite with the same result dict as astar(). For changing costs,
+    keep the DStarLite object and call .replan() instead."""
+    t0 = time.perf_counter()
+    d = DStarLite(start, goal, neighbors, heuristic, predecessors)
+    d.compute_shortest_path()
+    return d.result(t0, d.expansions)
+
+
+def euclidean_pair(coords):
+    """heuristic(a, b) for D* Lite. coords maps node -> (x, y)."""
+    return lambda a, b: math.hypot(coords[a][0] - coords[b][0], coords[a][1] - coords[b][1])
+
+
+def haversine_pair(G):
+    """heuristic(a, b) for D* Lite on an OSMnx graph."""
+    def h(a, b):
+        lat1, lat2 = math.radians(G.nodes[a]["y"]), math.radians(G.nodes[b]["y"])
+        dlon = math.radians(G.nodes[b]["x"] - G.nodes[a]["x"])
+        x = (math.sin((lat2 - lat1) / 2) ** 2
+             + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2)
+        return 2 * EARTH_RADIUS_M * math.asin(math.sqrt(x))
+    return h

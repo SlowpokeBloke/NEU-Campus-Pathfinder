@@ -234,8 +234,10 @@ class MinHeap {
   constructor() { this.a = []; }
   get size() { return this.a.length; }
   less(i, j) {
+    // Compare every field except the last (the node): [f, tie, node] or [k1, k2, tie, node]
     const x = this.a[i], y = this.a[j];
-    return x[0] < y[0] || (x[0] === y[0] && x[1] < y[1]);
+    for (let k = 0; k < x.length - 1; k++) if (x[k] !== y[k]) return x[k] < y[k];
+    return false;
   }
   push(item) {
     const a = this.a; a.push(item);
@@ -318,6 +320,105 @@ function bfs(start, goal, neighbors) {
   return { found: false, path: [], cost: Infinity, explored, ms: performance.now() - t0 };
 }
 
+// D* Lite (Koenig & Likhachev): searches backward from the goal and repairs the route when edge costs change. heuristic(a, b) estimates the distance between two places.
+// Same logic as DStarLite in algorithms.py.
+class DStarLite {
+  constructor(start, goal, neighbors, heuristic) {
+    this.start = start; this.goal = goal; this.last = start;
+    this.nb = neighbors;               // may be swapped before replan(): must read CURRENT costs
+    this.h = heuristic;
+    this.km = 0;
+    this.g = new Map(); this.rhs = new Map([[goal, 0]]);
+    this.U = new MinHeap(); this.keyOf = new Map(); this.tie = 0;
+    this.expansions = 0; this.explored = []; this.seen = new Set();
+    this.insert(goal);
+  }
+  G(s) { return this.g.has(s) ? this.g.get(s) : Infinity; }
+  R(s) { return this.rhs.has(s) ? this.rhs.get(s) : Infinity; }
+  key(s) { const m = Math.min(this.G(s), this.R(s)); return [m + this.h(this.start, s) + this.km, m]; }
+  insert(u) {
+    const k = this.key(u);
+    this.keyOf.set(u, k);
+    this.U.push([k[0], k[1], this.tie++, u]);
+  }
+  top() {                              // smallest valid entry, skipping stale ones
+    while (this.U.size) {
+      const t = this.U.a[0], k = this.keyOf.get(t[3]);
+      if (k && k[0] === t[0] && k[1] === t[1]) return t;
+      this.U.pop();
+    }
+    return null;
+  }
+  updateVertex(u) {
+    if (u !== this.goal) {
+      let best = Infinity;
+      for (const [v, c] of this.nb(u)) if (c !== Infinity) best = Math.min(best, c + this.G(v));
+      this.rhs.set(u, best);
+    }
+    this.keyOf.delete(u);
+    if (this.G(u) !== this.R(u)) this.insert(u);
+  }
+  computeShortestPath() {
+    for (;;) {
+      const t = this.top();
+      if (!t) return;
+      const ks = this.key(this.start);
+      const kTop = [t[0], t[1]];
+      const less = kTop[0] < ks[0] || (kTop[0] === ks[0] && kTop[1] < ks[1]);
+      if (!less && this.R(this.start) === this.G(this.start)) return;
+      const u = t[3], kNew = this.key(u);
+      if (kTop[0] < kNew[0] || (kTop[0] === kNew[0] && kTop[1] < kNew[1])) { this.insert(u); continue; }
+      this.keyOf.delete(u);
+      this.expansions++;
+      if (!this.seen.has(u)) { this.seen.add(u); this.explored.push(u); }
+      if (this.G(u) > this.R(u)) {     // if g is overconsistent: lower g
+        this.g.set(u, this.R(u));
+        for (const [s] of this.nb(u)) this.updateVertex(s);
+      } else {                         // if g is underconsistent: raise to infinity
+        this.g.set(u, Infinity);
+        for (const [s] of this.nb(u)) this.updateVertex(s);
+        this.updateVertex(u);
+      }
+    }
+  }
+  path() {
+    if (this.G(this.start) === Infinity) return [];
+    const path = [this.start], seen = new Set(path);
+    let node = this.start;
+    while (node !== this.goal) {
+      let next = null, best = Infinity;
+      for (const [v, c] of this.nb(node)) if (c !== Infinity && c + this.G(v) < best) { best = c + this.G(v); next = v; }
+      if (next === null || seen.has(next)) return [];
+      seen.add(next); path.push(next); node = next;
+    }
+    return path;
+  }
+  result(t0, replanned) {
+    const path = this.path();
+    let cost = 0;
+    for (let i = 1; i < path.length; i++) cost += this.nb(path[i - 1]).get(path[i]);
+    return { found: path.length > 0, path, cost: path.length ? cost : Infinity,
+             explored: this.explored.slice(), ms: performance.now() - t0, replanned };
+  }
+  solve() {
+    const t0 = performance.now();
+    this.computeShortestPath();
+    return this.result(t0, false);
+  }
+  // changedNodes: both ends of every edge whose cost changed. Only those vertices are repaired.
+  replan(changedNodes, newStart = null) {
+    const t0 = performance.now();
+    this.explored = []; this.seen = new Set();   // report only the work done by this repair
+    if (newStart !== null && newStart !== this.start) {
+      this.km += this.h(this.last, newStart);
+      this.last = this.start = newStart;
+    }
+    for (const u of changedNodes) this.updateVertex(u);
+    this.computeShortestPath();
+    return this.result(t0, true);
+  }
+}
+
 const EARTH_RADIUS_M = 6371009;
 function haversine(a, b) {
   const lat1 = a.lat * Math.PI / 180, lat2 = b.lat * Math.PI / 180;
@@ -375,7 +476,8 @@ function buildGraph(map) {
     adj.get(String(e.u)).push({ to: String(e.v), e });
     adj.get(String(e.v)).push({ to: String(e.u), e });
   }
-  return { nodes, adj };
+  const segEnds = new Map(map.edges.map(e => [e.seg, [String(e.u), String(e.v)]]));
+  return { nodes, adj, segEnds };
 }
 
 function lockedBuildings(husky, card, hour) {
@@ -398,12 +500,21 @@ function makeNeighbors(graph, costOf) {
   };
 }
 
-function runAll(start, goal, neighbors, heuristic) {
+// planner: a kept-alive DStarLite for this start/goal/costs, or null to build a new one.
+// changed: endpoints of edges whose cost changed since the planner last ran.
+function runAll(start, goal, neighbors, heuristic, heuristic2, planner = null, changed = []) {
+  let dstar;
+  if (planner) { planner.nb = neighbors; dstar = planner.replan(changed); }
+  else { planner = new DStarLite(start, goal, n => planner.nb(n), heuristic2); planner.nb = neighbors; dstar = planner.solve(); }
   return {
-    "A*": astar(start, goal, neighbors, heuristic),
-    "Weighted A* (w=1.5)": astar(start, goal, neighbors, heuristic, 1.5),
-    "Dijkstra (no heuristic)": astar(start, goal, neighbors, () => 0),
-    "BFS (fewest steps)": bfs(start, goal, neighbors),
+    results: {
+      "A*": astar(start, goal, neighbors, heuristic),
+      "D* Lite": dstar,
+      "Weighted A* (w=1.5)": astar(start, goal, neighbors, heuristic, 1.5),
+      "Dijkstra (no heuristic)": astar(start, goal, neighbors, () => 0),
+      "BFS (fewest steps)": bfs(start, goal, neighbors),
+    },
+    planner,
   };
 }
 // CORE END
@@ -414,6 +525,8 @@ const svg = $("map");
 const NS = "http://www.w3.org/2000/svg";
 let current = "husky";
 let graph, closed = new Set(), results = null, shown = null, clickTurn = "from", view = null;
+// D* Lite is kept between searches so a closed path is repaired, not searched from scratch
+let planner = null, plannerKey = "", plannerClosed = new Set();
 
 for (let h = 0; h < 24; h++) {
   const o = document.createElement("option");
@@ -468,7 +581,7 @@ function findRoute() {
     setStatus(`Choose a ${!start ? "start" : "goal"} from the list or click the map.`, true);
     return;
   }
-  let costOf, heuristic, note;
+  let costOf, heuristic, heuristic2, note, scenario;
   if (current === "husky") {
     const card = $("card").value.trim();
     const hour = Number($("hour").value);
@@ -476,6 +589,8 @@ function findRoute() {
     costOf = e => (closed.has(e.seg) || (e.door && locked.has(e.door))) ? Infinity : e.len;
     const g = graph.nodes.get(goal);
     heuristic = id => { const n = graph.nodes.get(id); return Math.hypot(g.x - n.x, g.y - n.y); };
+    heuristic2 = (a, b) => { const p = graph.nodes.get(a), q = graph.nodes.get(b); return Math.hypot(p.x - q.x, p.y - q.y); };
+    scenario = `husky|${card}|${hour}`;
     const who = !card ? "Visitor" : known ? "Card recognised" : "Card not recognised, treated as a visitor";
     note = `${who} at ${String(hour).padStart(2, "0")}:00. Locked: ${[...locked].sort().join(", ") || "nothing"}.`;
     graph.locked = locked;
@@ -487,12 +602,24 @@ function findRoute() {
       if (!cache.has(id)) cache.set(id, haversine(graph.nodes.get(id), g));
       return cache.get(id);
     };
+    heuristic2 = (a, b) => haversine(graph.nodes.get(a), graph.nodes.get(b));
+    scenario = `campus|${profile}`;
     note = `Profile: ${profile === "step_free" ? "step-free, stairs blocked" : "fastest, stairs allowed"}.`;
     graph.locked = new Set();
   }
   if (closed.size) note += ` ${closed.size} path${closed.size > 1 ? "s" : ""} closed by you.`;
   const neighbors = makeNeighbors(graph, costOf);
-  results = runAll(start, goal, neighbors, heuristic);
+  // Reuse the D* Lite planner only if nothing but the closed paths changed
+  const key = `${scenario}|${start}|${goal}`;
+  let reuse = null, changed = [];
+  if (planner && plannerKey === key) {
+    reuse = planner;
+    for (const seg of new Set([...closed, ...plannerClosed])) {
+      if (closed.has(seg) !== plannerClosed.has(seg)) changed.push(...(graph.segEnds.get(seg) || []));
+    }
+  }
+  const out = runAll(start, goal, neighbors, heuristic, heuristic2, reuse, changed);
+  results = out.results; planner = out.planner; plannerKey = key; plannerClosed = new Set(closed);
   if (!results["A*"].found) {
     setStatus(`No route from ${start} to ${goal}: every way is blocked. ${note}`, true);
     $("results").hidden = true; shown = null; draw();
@@ -523,7 +650,8 @@ function traceRoute(path, neighbors, heuristic) {
 function recommend(res, rows) {
   const found = Object.entries(res).filter(([, r]) => r.found);
   const best = Math.min(...found.map(([, r]) => r.cost));
-  const optimal = found.filter(([, r]) => r.cost <= best + 0.5);
+  // D* Lite is left out of the pick: its count is a repair, not a search from scratch
+  const optimal = found.filter(([n, r]) => n !== "D* Lite" && r.cost <= best + 0.5);
   optimal.sort((a, b) => a[1].explored.length - b[1].explored.length || (a[0] !== "A*") - (b[0] !== "A*"));
   const [pick, pr] = optimal[0];
   const lines = [`Use <b>${pick}</b>: it found the shortest route (${best.toFixed(0)} m) while checking the fewest places (${pr.explored.length}).`];
@@ -535,6 +663,12 @@ function recommend(res, rows) {
   const wa = res["Weighted A* (w=1.5)"], bf = res["BFS (fewest steps)"];
   if (wa.found && wa.cost > best + 0.5)
     lines.push(`Weighted A* checked ${wa.explored.length} places but its route is ${(wa.cost - best).toFixed(0)} m longer.`);
+  const ds = res["D* Lite"];
+  if (ds.found) {
+    lines.push(ds.replanned
+      ? `D* Lite repaired its route after your change by re-checking only ${ds.explored.length} places; a fresh A* search checked ${a.explored.length}.`
+      : `D* Lite searched backward from the goal and checked ${ds.explored.length} places. Close a path (shift-click) and it will repair the route instead of searching again.`);
+  }
   if (bf.found && bf.cost > best + 0.5)
     lines.push(`BFS ignores distance: its route is ${(bf.cost - best).toFixed(0)} m longer.`);
   const q = rows[0].left ? rows[0].h / rows[0].left : 1;
